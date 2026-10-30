@@ -7,6 +7,8 @@
     "name": "Gigma",
     "url": "https://api.auth.gigma.ru"
   },
+  "homepage": "https://api.auth.gigma.ru",
+  "repository": "https://github.com/Artypoul/gigma-mcp",
   "license": "MIT",
   "skills": "./skills/",
   "mcpServers": "./mcp.json",
