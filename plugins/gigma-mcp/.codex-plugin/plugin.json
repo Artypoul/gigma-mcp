@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json.schemastore.org/codex-plugin.json",
+  "name": "gigma-mcp",
+  "version": "0.1.0",
+  "description": "Connect an agent to the Gigma owner MCP through native callback onboarding.",
+  "author": {
+    "name": "Gigma",
+    "url": "https://api.auth.gigma.ru"
+  },
+  "license": "MIT",
+  "skills": "./skills/",
+  "mcpServers": "./mcp.json",
+  "interface": {
+    "displayName": "Gigma MCP",
+    "shortDescription": "Connect an AI agent to Gigma.",
+    "longDescription": "Connect Codex and compatible agents to the Gigma owner MCP through a native callback flow.",
+    "developerName": "Gigma",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "defaultPrompt": ["Use Gigma MCP to connect my owner workspace through the native callback flow."]
+  }
+}

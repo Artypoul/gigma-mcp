@@ -1,0 +1,21 @@
+{
+  "name": "gigma-mcp",
+  "interface": {
+    "displayName": "Gigma Agent Plugins"
+  },
+  "plugins": [
+    {
+      "name": "gigma-mcp",
+      "source": {
+        "source": "local",
+        "path": "./plugins/gigma-mcp"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_USE"
+      },
+      "category": "Productivity",
+      "description": "Connect an AI agent to Gigma through native callback onboarding."
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "gigma-mcp",
+  "description": "Gigma MCP plugin for AI agents.",
+  "owner": {
+    "name": "Gigma"
+  },
+  "plugins": [
+    {
+      "name": "gigma-mcp",
+      "source": "./plugins/gigma-mcp",
+      "description": "Connect Claude Code to Gigma through native callback onboarding."
+    }
+  ]
+}

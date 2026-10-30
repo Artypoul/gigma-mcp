@@ -1,0 +1,19 @@
+{
+  "name": "gigma-mcp",
+  "owner": {
+    "name": "Gigma"
+  },
+  "metadata": {
+    "description": "Gigma MCP plugin for AI agents.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "gigma-mcp",
+      "source": "./plugins/gigma-mcp",
+      "description": "Connect Cursor to Gigma through native callback onboarding.",
+      "version": "0.1.0",
+      "category": "Productivity"
+    }
+  ]
+}
