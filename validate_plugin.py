@@ -6,7 +6,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parent
 PACKAGE = ROOT / "plugins" / "gigma-mcp"
 MCP_URL = "https://api.auth.gigma.ru/mcp/owner"
@@ -15,7 +14,7 @@ MCP_URL = "https://api.auth.gigma.ru/mcp/owner"
 def load(path: Path) -> dict[str, object]:
     value = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(value, dict):
-        raise ValueError(f"{path} must contain an object")
+        raise TypeError(f"{path} must contain an object")
     return value
 
 
@@ -48,13 +47,51 @@ def main() -> int:
     if mcp["mcpServers"]["gigma"]["type"] != "streamable-http":
         raise ValueError("MCP transport mismatch")
 
+    portable = load(PACKAGE / "plugin.json")
+    codex = load(PACKAGE / ".codex-plugin/plugin.json")
+    claude = load(PACKAGE / ".claude-plugin/plugin.json")
+    cursor = load(PACKAGE / ".cursor-plugin/plugin.json")
+    for manifest in (portable, codex, claude, cursor):
+        if manifest.get("name") != "gigma-mcp":
+            raise ValueError("plugin manifest name mismatch")
+        if manifest.get("version") != "0.1.0":
+            raise ValueError("plugin manifest version mismatch")
+    if codex.get("mcpServers") != "./mcp.json":
+        raise ValueError("Codex MCP mapping mismatch")
+    if claude.get("mcpServers", {}).get("gigma", {}).get("url") != MCP_URL:
+        raise ValueError("Claude MCP URL mismatch")
+    if claude.get("mcpServers", {}).get("gigma", {}).get("type") != "http":
+        raise ValueError("Claude MCP transport mismatch")
+    if cursor.get("mcpServers") != "./mcp.json":
+        raise ValueError("Cursor MCP mapping mismatch")
+
     skill = PACKAGE / "skills/gigma-owner-auth/SKILL.md"
     text = skill.read_text(encoding="utf-8")
-    for required in ("erp_dialog_check", "erp_dialog_start", "erp_dialog_status", "erp_dialog_connect", "session_capability"):
+    for required in (
+        "erp_dialog_check",
+        "erp_dialog_start",
+        "erp_dialog_status",
+        "erp_dialog_reconcile",
+        "erp_dialog_connect",
+        "erp_dialog_cancel",
+        "erp_dialog_logout",
+        "session_capability",
+    ):
         if required not in text:
             raise ValueError(f"skill missing {required}")
-    if any(secret in text.lower() for secret in ("client_secret", "access_token", "refresh_token")):
+    if "codex mcp login" in text and "OAuth" not in text:
+        raise ValueError("skill does not explain the separate OAuth mode")
+    if any(
+        secret in text.lower()
+        for secret in ("client_secret", "access_token", "refresh_token")
+    ):
         raise ValueError("skill contains forbidden credential material")
+
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    if "https://github.com/Artypoul/gigma-mcp.git" not in readme:
+        raise ValueError("README missing public repository install URL")
+    if "api.auth.gigma.ru.git" in readme:
+        raise ValueError("README points users at the backend repository")
 
     print("Validation OK: Gigma MCP marketplace, manifests, endpoint, and skill")
     return 0
