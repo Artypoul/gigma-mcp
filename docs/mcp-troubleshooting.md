@@ -12,6 +12,16 @@ replace it with REST, \`api.gigma.ru\`, a guessed alias or a second OAuth flow.
 Never execute arbitrary REST or arbitrary SQL from this package. Check the
 installed plugin version and the server's \`tools/list\`.
 
+## Native and OAuth transport instructions disagree
+
+The package maps Codex to \`auth.type: none\` so native dialog tools can be
+discovered without a pasted token. The live server may also advertise
+host-managed OAuth for confidential clients. Those are separate modes.
+
+If the active host requires OAuth before exposing \`erp_dialog_*\`, stop and report
+a transport contract mismatch. Do not run OAuth and native callback in one
+attempt and do not claim that installation fixed the server policy.
+
 ## The server is disabled
 
 The server controls owner-MCP and callback flags. A plugin cannot enable them.
