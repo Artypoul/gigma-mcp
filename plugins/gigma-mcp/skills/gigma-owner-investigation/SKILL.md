@@ -5,7 +5,7 @@ description: Read redacted counterparty and activity evidence inside the verifie
 
 # Owner investigation
 
-Use \`erp_counterparty_investigate\` and \`erp_activity_logs_inspect\` for
+Use `erp_counterparty_investigate` and `erp_activity_logs_inspect` for
 read-only investigation.
 
 - Use the selector required by the active schema.
