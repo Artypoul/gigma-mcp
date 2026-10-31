@@ -16,7 +16,7 @@
   "mcpServers": {
     "gigma": {
       "type": "http",
-      "url": "https://api.auth.gigma.ru/mcp/owner"
+      "url": "https://api.auth.gigma.ru/mcp/owner/"
     }
   }
 }
