@@ -57,7 +57,7 @@ def main() -> int:
     for manifest in (portable, codex, claude, cursor):
         if manifest.get("name") != "gigma-mcp":
             raise ValueError("plugin manifest name mismatch")
-        if manifest.get("version") != "0.1.1":
+        if manifest.get("version") != "0.2.0":
             raise ValueError("plugin manifest version mismatch")
     if codex.get("mcpServers") != "./mcp.json":
         raise ValueError("Codex MCP mapping mismatch")
@@ -93,10 +93,14 @@ def main() -> int:
         raise ValueError("skill contains forbidden credential material")
 
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    package_readme = (PACKAGE / "README.md").read_text(encoding="utf-8")
     if "https://github.com/Artypoul/gigma-mcp.git" not in readme:
         raise ValueError("README missing public repository install URL")
     if "codex mcp remove gigma" not in readme or "codex mcp login gigma" not in readme:
         raise ValueError("README missing stale OAuth server migration guidance")
+    for document in (readme, package_readme):
+        if "MCP Apps" not in document or "text fallback" not in document:
+            raise ValueError("README missing MCP Apps fallback guidance")
     if "api.auth.gigma.ru.git" in readme:
         raise ValueError("README points users at the backend repository")
 

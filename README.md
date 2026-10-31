@@ -50,6 +50,11 @@ The shared skill guides the agent through the native callback sequence:
 `erp_dialog_start`, callback status, optional provider reconcile, and
 `erp_dialog_connect`. Session capabilities remain inside MCP tool state.
 
+Compatible native chats can render an MCP Apps choice card after
+`erp_dialog_check` with buttons for login and registration. Claude Code and
+Cursor keep the text fallback when their host does not render MCP Apps UI; the
+server-side callback sequence is the same in both modes.
+
 The package connects to:
 
 ```text
