@@ -88,7 +88,7 @@ checking its status. If the host loses that state, the agent must use the
 documented recovery path and never ask you to paste a capability.
 
 All clients use the text callback flow. The public package does not advertise or
-depend on an MCP Apps UI. If a client still renders a UI card, that metadata is
+depend on an optional UI card. If a client still renders a UI card, that metadata is
 coming from the live backend and requires a separate backend change to remove.
 
 ## What to ask the agent
