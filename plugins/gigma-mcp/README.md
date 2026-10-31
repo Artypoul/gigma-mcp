@@ -30,7 +30,7 @@ For the complete first-run procedure, read
 
 ## Native owner connection
 
-The package uses a native callback flow:
+The package uses a text callback flow:
 
 `erp_dialog_check` → explicit login or registration choice →
 `erp_dialog_start` → callback call → `erp_dialog_status` →
@@ -41,10 +41,16 @@ dialog and session capabilities remain in MCP tool state. They are never
 copied into chat, URLs, logs, files, or another service.
 
 Do not run `codex mcp login gigma` for this native flow. The Codex mapping uses
-`auth.type: none` for native dialog discovery. The package uses the slash transport route `https://api.auth.gigma.ru/mcp/owner/` to avoid a POST redirect. The live server may advertise
-host-managed OAuth for other confidential transport clients. If the active host
-requires OAuth before exposing `erp_dialog_*`, stop and report a transport
-contract mismatch instead of mixing OAuth with the callback attempt.
+`auth.type: none` for native dialog discovery. The package uses the slash
+transport route `https://api.auth.gigma.ru/mcp/owner/` to avoid a POST
+redirect. The live server may advertise host-managed OAuth for other
+confidential transport clients. If the active host requires OAuth before
+exposing `erp_dialog_*`, stop and report a transport contract mismatch instead
+of mixing OAuth with the callback attempt.
+
+The public package does not advertise or depend on MCP Apps UI. If a client
+still renders a UI card, that comes from live backend metadata and requires a
+separate backend change to remove.
 
 ## After connection
 
