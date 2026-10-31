@@ -9,7 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 PACKAGE = ROOT / "plugins" / "gigma-mcp"
-MCP_URL = "https://api.auth.gigma.ru/mcp/owner"
+MCP_URL = "https://api.auth.gigma.ru/mcp/owner/"
 
 REQUIRED_DOCS = (
     ROOT / "docs/mcp-client-setup.md",
