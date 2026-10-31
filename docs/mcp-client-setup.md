@@ -71,7 +71,7 @@ the capability; it must report that a fresh check or bounded recovery is needed.
 
 ## Native mode and transport OAuth mode
 
-This package's Codex mapping uses `auth.type: none) so the native dialog tools
+The package transport uses the slash route `https://api.auth.gigma.ru/mcp/owner/` to avoid a POST redirect. This package's Codex mapping uses `auth.type: none` so the native dialog tools
 can be discovered without a pasted token. Do not run `codex mcp login gigma`
 in the same attempt.
 
