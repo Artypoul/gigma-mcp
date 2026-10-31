@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin.json",
   "name": "gigma-mcp",
   "displayName": "Gigma MCP",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Connect Claude Code to the Gigma owner MCP through native callback onboarding.",
   "author": {
     "name": "Gigma",

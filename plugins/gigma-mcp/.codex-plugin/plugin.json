@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/codex-plugin.json",
   "name": "gigma-mcp",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Connect an agent to the Gigma owner MCP through native callback onboarding.",
   "author": {
     "name": "Gigma",

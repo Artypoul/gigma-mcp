@@ -39,5 +39,10 @@ tool state and are never copied into user-facing text. Hosts may prefix MCP
 tool names with their plugin namespace; use the discovered schema and tool
 name from the active client.
 
+Compatible native chats may render an MCP Apps choice card after
+`erp_dialog_check`. Claude Code and Cursor keep the text fallback when their
+host does not render MCP Apps UI; both paths call the same server-side
+`erp_dialog_start` contract.
+
 The package does not contain credentials, callback proofs, a local MCP server,
 or a second implementation of the Gigma authentication flow.
