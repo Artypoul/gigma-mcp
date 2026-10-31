@@ -1,7 +1,7 @@
 # Gigma MCP agent plugin
 
 This package connects Codex, Claude Code, and Cursor to the existing Gigma owner
-MCP at \`https://api.auth.gigma.ru/mcp/owner\`. It packages the remote
+MCP at `https://api.auth.gigma.ru/mcp/owner`. It packages the remote
 Streamable HTTP server configuration and skills for the native callback flow
 and owner operations. Authentication and business logic remain on the Gigma
 server.
@@ -10,20 +10,20 @@ server.
 
 Install from the public marketplace repository:
 
-\`\`\`text
+```text
 codex plugin marketplace add https://github.com/Artypoul/gigma-mcp.git
 codex plugin add gigma-mcp@gigma-mcp
-\`\`\`
+```
 
 Claude Code:
 
-\`\`\`text
+```text
 claude plugin marketplace add https://github.com/Artypoul/gigma-mcp.git
 claude plugin install gigma-mcp@gigma-mcp
-\`\`\`
+```
 
-Cursor can install the \`gigma-mcp\` entry from the repository marketplace or
-use the package's \`mcp.json\` in Cursor MCP settings.
+Cursor can install the `gigma-mcp` entry from the repository marketplace or
+use the package's `mcp.json` in Cursor MCP settings.
 
 For the complete first-run procedure, read
 [docs/mcp-client-setup.md](../../docs/mcp-client-setup.md).
@@ -32,18 +32,18 @@ For the complete first-run procedure, read
 
 The package uses a native callback flow:
 
-\`erp_dialog_check\` → explicit login or registration choice →
-\`erp_dialog_start\` → callback call → \`erp_dialog_status\` →
-\`erp_dialog_connect\`.
+`erp_dialog_check` → explicit login or registration choice →
+`erp_dialog_start` → callback call → `erp_dialog_status` →
+`erp_dialog_connect`.
 
 The agent shows only the callback number and safe project results. Opaque
 dialog and session capabilities remain in MCP tool state. They are never
 copied into chat, URLs, logs, files, or another service.
 
-Do not run \`codex mcp login gigma\` for this native flow. The Codex mapping uses
-\`auth.type: none\` for native dialog discovery. The live server may advertise
+Do not run `codex mcp login gigma` for this native flow. The Codex mapping uses
+`auth.type: none` for native dialog discovery. The live server may advertise
 host-managed OAuth for other confidential transport clients. If the active host
-requires OAuth before exposing \`erp_dialog_*\`, stop and report a transport
+requires OAuth before exposing `erp_dialog_*`, stop and report a transport
 contract mismatch instead of mixing OAuth with the callback attempt.
 
 ## After connection
