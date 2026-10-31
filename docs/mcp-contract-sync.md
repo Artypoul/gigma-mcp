@@ -27,7 +27,7 @@ anything that requires a phone, capability or token.
 - owner MCP server identity and protocol response;
 - native dialog tools are present;
 - text callback tools remain callable without a pasted token;
-- package documentation does not advertise MCP Apps UI;
+- package documentation does not advertise optional UI card;
 - metadata and tool descriptions contain no capability, token or proof values;
 - the package's native-flow documentation matches the live contract.
 
