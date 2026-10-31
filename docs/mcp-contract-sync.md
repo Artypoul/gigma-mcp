@@ -7,17 +7,17 @@ that the live owner MCP exposes the native contract expected by the package.
 
 Use the exact POST transport endpoint:
 
-\`\`\`text
+```text
 https://api.auth.gigma.ru/mcp/owner/
-\`\`\`
+```
 
 Perform only:
 
-1. \`initialize\`;
-2. \`notifications/initialized\`;
-3. \`tools/list\`;
-4. \`resources/list\`;
-5. \`resources/read\` for \`ui://gigma/owner-auth/v1.html\`.
+1. `initialize`;
+2. `notifications/initialized`;
+3. `tools/list`;
+4. `resources/list`;
+5. `resources/read` for `ui://gigma/owner-auth/v1.html`.
 
 Never call a dialog tool, business tool, provider operation, OAuth login or
 anything that requires a phone, capability or token.
@@ -27,9 +27,9 @@ anything that requires a phone, capability or token.
 - HTTP 200 for the supported transport requests;
 - owner MCP server identity and protocol response;
 - native dialog tools are present;
-- \`erp_dialog_check\` points to the expected UI resource;
-- resource MIME is \`text/html;profile=mcp-app\`;
-- UI bridge contains \`ui/initialize\` and \`tools/call\`;
+- `erp_dialog_check` points to the expected UI resource;
+- resource MIME is `text/html;profile=mcp-app`;
+- UI bridge contains `ui/initialize` and `tools/call`;
 - metadata and static HTML contain no capability, token or proof values;
 - login/register choice labels are present;
 - the package's native-flow documentation matches the live contract.
