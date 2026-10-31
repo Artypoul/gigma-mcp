@@ -21,7 +21,7 @@ secret, OAuth implementation or ERP API change belongs here.
 
 ## Auth boundary
 
-The package uses the native chat callback flow exposed by \`erp_dialog_*\`.
+The package uses the native chat callback flow exposed by `erp_dialog_*`.
 Host-managed OAuth/PKCE is a separate mode for confidential clients and is not
 mixed into a native attempt. Installation is not owner login and does not prove
 production readiness.
