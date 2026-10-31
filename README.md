@@ -50,12 +50,6 @@ The shared skill guides the agent through the native callback sequence:
 `erp_dialog_start`, callback status, optional provider reconcile, and
 `erp_dialog_connect`. Session capabilities remain inside MCP tool state.
 
-The callback flow keeps a private state record across chat messages with the
-original `idempotency_key` and `dialog_capability`. It resumes with
-`erp_dialog_status` before any `erp_dialog_connect`, and blocks a second active
-callback attempt for the same owner. These values are never shown to the user;
-hosts without MCP Apps UI use the same stateful text fallback.
-
 Compatible native chats can render an MCP Apps choice card after
 `erp_dialog_check` with buttons for login and registration. Claude Code and
 Cursor keep the text fallback when their host does not render MCP Apps UI; the

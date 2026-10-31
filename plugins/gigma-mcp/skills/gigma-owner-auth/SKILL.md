@@ -32,38 +32,6 @@ When the user asks to connect an owner workspace:
    tools; every no-bearer business call requires that capability. Use
    `erp_dialog_me` when the current owner/project summary is needed.
 
-## Persistent callback state and single-flight guard
-
-Keep one private `gigma_owner_callback` state record across chat messages. It
-contains the supplied phone, the generated `idempotency_key`, the returned
-`dialog_capability`, the selected `action`, the optional `project_name`, and
-the current lifecycle `status` (plus the safe callback number and expiry when
-returned). The record lives only in MCP tool state: never copy its values into
-user-facing text, logs, URLs, or a new tool argument invented from memory.
-
-- Create the record before `erp_dialog_check` and keep the same `idempotency_key`
-  for an exact phone/check retry. Never generate a new key
-  just because the conversation moved to a new message.
-- Treat the record as single-flight. While it is active, reject a parallel callback attempt
-  for the same or another phone; do not call a second
-  `erp_dialog_check` or `erp_dialog_start` until the current record is
-  terminal or the user explicitly chooses a new attempt after expiry/cancel.
-- Store `dialog_capability` immediately after `check` and reuse it for
-  `start`, `status`, `reconcile`, `connect`, and `cancel`. A lost response is
-  not permission to create a fresh capability or callback.
-- `status` is read-only and is the recovery operation. After `start`, on every
-  new message resume with the stored capability and call `erp_dialog_status`
-  first. Only when it returns a verified/completed state may the flow advance
-  through **status → connect**.
-- Make one deliberate `erp_dialog_connect` call after that status. If its
-  response is lost, call status first and recover the persisted completion;
-  never run parallel connect calls or blindly repeat a provider/session
-  operation.
-- On `expired`, `cancelled`, `provider_outcome_unknown`, or
-  `recovery_required`, stop and report the bounded state. Clear or quarantine
-  the record according to the terminal state and require explicit user intent
-  before a new callback attempt.
-
 If the user declines, the callback is stale, or the server returns a terminal
 `expired` or `cancelled` state, report it. Expiry, an account-exists conflict,
 or a changed login/registration choice or project name requires finishing the

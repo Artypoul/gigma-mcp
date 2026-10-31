@@ -35,12 +35,9 @@ The shared `gigma-owner-auth` skill teaches the agent to call
 `erp_dialog_check`, `erp_dialog_start`, `erp_dialog_status`, and
 `erp_dialog_connect`, then use the opaque session capability for business
 tools. It also covers cancellation and logout. Capabilities remain inside MCP
-tool state and are never copied into user-facing text. The skill keeps the
-original `idempotency_key` and `dialog_capability` in one private callback
-record, resumes with `erp_dialog_status` before `erp_dialog_connect`, and
-blocks parallel callback attempts. Hosts may prefix MCP tool names with their
-plugin namespace; use the discovered schema and tool name from the active
-client.
+tool state and are never copied into user-facing text. Hosts may prefix MCP
+tool names with their plugin namespace; use the discovered schema and tool
+name from the active client.
 
 Compatible native chats may render an MCP Apps choice card after
 `erp_dialog_check`. Claude Code and Cursor keep the text fallback when their
