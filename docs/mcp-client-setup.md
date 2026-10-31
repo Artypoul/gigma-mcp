@@ -78,7 +78,7 @@ be discovered without a pasted token. Do not run `codex mcp login gigma` in the
 same attempt.
 
 All clients use the text callback flow. The public package does not advertise or
-depend on MCP Apps UI. If a client still renders a UI card, that metadata comes
+depend on optional UI card. If a client still renders a UI card, that metadata comes
 from the live backend and requires a separate backend change to remove.
 
 The live server may advertise host-managed OAuth in its initialization
