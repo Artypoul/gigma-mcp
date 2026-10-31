@@ -15,11 +15,11 @@ MCP probes; do not change backend or server configuration.
 **Tech Stack:** Markdown, Agent Plugin manifests, dependency-free Python
 validation, read-only MCP JSON-RPC probes.
 
-**Spec:** \`docs/superpowers/specs/2026-10-31-gigma-mcp-native-operating-contour-design.md\`
+**Spec:** `docs/superpowers/specs/2026-10-31-gigma-mcp-native-operating-contour-design.md`
 
 ## Global Constraints
 
-- Canonical endpoint: \`https://api.auth.gigma.ru/mcp/owner\`.
+- Canonical endpoint: `https://api.auth.gigma.ru/mcp/owner`.
 - Native callback and host-managed OAuth are separate modes.
 - Do not ask users to paste capabilities, tokens, callback proofs or secrets.
 - Do not call ERP API routes from this package.
@@ -43,29 +43,29 @@ validation, read-only MCP JSON-RPC probes.
 
 **Files:**
 
-- Modify: \`README.md\`
-- Modify: \`plugins/gigma-mcp/README.md\`
-- Modify: \`plugins/gigma-mcp/skills/gigma-owner-auth/SKILL.md\`
-- Create: \`docs/mcp-client-setup.md\`
-- Create: \`docs/gigma-user-journey.md\`
+- Modify: `README.md`
+- Modify: `plugins/gigma-mcp/README.md`
+- Modify: `plugins/gigma-mcp/skills/gigma-owner-auth/SKILL.md`
+- Create: `docs/mcp-client-setup.md`
+- Create: `docs/gigma-user-journey.md`
 
 **Verification:**
 
-\`\`\`text
+```text
 python validate_plugin.py
 python -m compileall -q validate_plugin.py
 git diff --check
-\`\`\`
+```
 
 ### Task 2: Project workflows and capability boundaries
 
 **Files:**
 
-- Create: \`docs/gigma-project-workflows.md\`
-- Create: \`docs/mcp-capability-matrix.md\`
-- Create: \`docs/mcp-security-and-approvals.md\`
-- Create: \`docs/mcp-troubleshooting.md\`
-- Create: \`docs/examples/golden-dialogues.md\`
+- Create: `docs/gigma-project-workflows.md`
+- Create: `docs/mcp-capability-matrix.md`
+- Create: `docs/mcp-security-and-approvals.md`
+- Create: `docs/mcp-troubleshooting.md`
+- Create: `docs/examples/golden-dialogues.md`
 
 **Verification:**
 
@@ -78,11 +78,11 @@ git diff --check
 
 **Files:**
 
-- Create: \`plugins/gigma-mcp/skills/gigma-owner-setup/SKILL.md\`
-- Create: \`plugins/gigma-mcp/skills/gigma-owner-router/SKILL.md\`
-- Create: \`plugins/gigma-mcp/skills/gigma-owner-project-ops/SKILL.md\`
-- Create: \`plugins/gigma-mcp/skills/gigma-owner-subscriptions/SKILL.md\`
-- Create: \`plugins/gigma-mcp/skills/gigma-owner-investigation/SKILL.md\`
+- Create: `plugins/gigma-mcp/skills/gigma-owner-setup/SKILL.md`
+- Create: `plugins/gigma-mcp/skills/gigma-owner-router/SKILL.md`
+- Create: `plugins/gigma-mcp/skills/gigma-owner-project-ops/SKILL.md`
+- Create: `plugins/gigma-mcp/skills/gigma-owner-subscriptions/SKILL.md`
+- Create: `plugins/gigma-mcp/skills/gigma-owner-investigation/SKILL.md`
 
 **Verification:**
 
@@ -96,20 +96,20 @@ git diff --check
 
 **Files:**
 
-- Modify: \`validate_plugin.py\`
+- Modify: `validate_plugin.py`
 
 **Verification:**
 
-\`\`\`text
+```text
 python validate_plugin.py
 python -m compileall -q validate_plugin.py
 git diff --check
-\`\`\`
+```
 
 The validator must check required docs/skills, canonical endpoint, native
-\`auth.type: none\`, callback markers, text fallback and absence of raw secret
-values. It must allow documentation words such as \`OAuth\`,
-\`dialog_capability\` and \`session_capability\`.
+`auth.type: none`, callback markers, text fallback and absence of raw secret
+values. It must allow documentation words such as `OAuth`,
+`dialog_capability` and `session_capability`.
 
 A negative check mutates a temporary copy, removes a required marker and inserts
 a fake secret assignment. The real checkout is not mutated.
@@ -118,10 +118,10 @@ a fake secret assignment. The real checkout is not mutated.
 
 **Files:**
 
-- Create: \`docs/mcp-contract-sync.md\`
+- Create: `docs/mcp-contract-sync.md`
 
-Probe only \`initialize\`, \`notifications/initialized\`, \`tools/list\`,
-\`resources/list\` and \`resources/read\` for the owner-auth UI resource.
+Probe only `initialize`, `notifications/initialized`, `tools/list`,
+`resources/list` and `resources/read` for the owner-auth UI resource.
 
 Verify HTTP 200, dialog tool presence, UI URI/MIME, no credential values in
 metadata/static HTML, and native documentation consistency. Never call a dialog
@@ -142,12 +142,12 @@ remain separate operational gates.
 
 ## Commit boundaries
 
-- \`docs: explain native Gigma MCP user flow\`
-- \`feat: make native owner auth user-facing and recoverable\`
-- \`docs: add owner MCP workflow and boundaries\`
-- \`feat: add owner MCP goal skills\`
-- \`test: extend public plugin contract validator\`
-- \`docs: add live contract synchronization gate\`
+- `docs: explain native Gigma MCP user flow`
+- `feat: make native owner auth user-facing and recoverable`
+- `docs: add owner MCP workflow and boundaries`
+- `feat: add owner MCP goal skills`
+- `test: extend public plugin contract validator`
+- `docs: add live contract synchronization gate`
 
 ## DoneWhen
 
