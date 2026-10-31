@@ -79,10 +79,10 @@ must still respect explicit consent before `erp_dialog_start`.
 
 ## Transport URL or redirect mismatch
 
-The package's canonical endpoint is
-`https://api.auth.gigma.ru/mcp/owner`. The deployed route may normalize a
-trailing slash. Verify the exact POST transport behavior with a read-only
-initialize probe; do not change the endpoint based on a GET response.
+The package's canonical transport endpoint is
+`https://api.auth.gigma.ru/mcp/owner/`. The no-slash URL redirects with `307`,
+which some POST clients do not follow. Verify the exact POST transport behavior
+with a read-only initialize probe and keep the slash route in package config.
 
 ## Logout
 
