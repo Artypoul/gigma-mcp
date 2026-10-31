@@ -55,8 +55,11 @@ Installation only installs the transport and skills. It does not log the owner
 into a workspace and does not prove production availability.
 
 For this package's native chat flow, do **not** run `codex mcp login gigma`.
-Host-managed OAuth is a separate transport mode for other confidential clients;
-it is not mixed with the native callback attempt.
+The package maps Codex to `auth.type: none) so native dialog tools can be
+discovered without a pasted token. The live server may also advertise
+host-managed OAuth for other confidential transport clients. If the active host
+requires OAuth before it exposes `erp_dialog_*`, stop and report a transport
+contract mismatch; do not mix OAuth and native callback in one attempt.
 
 ## Connect Gigma
 
