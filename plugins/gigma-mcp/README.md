@@ -41,7 +41,7 @@ dialog and session capabilities remain in MCP tool state. They are never
 copied into chat, URLs, logs, files, or another service.
 
 Do not run `codex mcp login gigma` for this native flow. The Codex mapping uses
-`auth.type: none` for native dialog discovery. The live server may advertise
+`auth.type: none` for native dialog discovery. The package uses the slash transport route `https://api.auth.gigma.ru/mcp/owner/` to avoid a POST redirect. The live server may advertise
 host-managed OAuth for other confidential transport clients. If the active host
 requires OAuth before exposing `erp_dialog_*`, stop and report a transport
 contract mismatch instead of mixing OAuth with the callback attempt.
