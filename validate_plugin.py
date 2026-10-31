@@ -86,6 +86,21 @@ def main() -> int:
         raise ValueError("skill does not explain the separate OAuth mode")
     if "Use the `gigma` MCP server" not in text:
         raise ValueError("skill lost the canonical gigma MCP server id")
+    for required in (
+        "gigma_owner_callback",
+        "dialog_capability",
+        "idempotency_key",
+        "single-flight",
+        "same `idempotency_key`",
+        "status → connect",
+        "parallel callback attempt",
+        "status first",
+        "one deliberate `erp_dialog_connect`",
+    ):
+        if required not in text:
+            raise ValueError(f"skill missing callback state contract: {required}")
+    if text.index("erp_dialog_status") > text.index("erp_dialog_connect"):
+        raise ValueError("skill must describe status before connect")
     if any(
         secret in text.lower()
         for secret in ("client_secret", "access_token", "refresh_token")
