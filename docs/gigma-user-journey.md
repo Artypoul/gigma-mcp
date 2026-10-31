@@ -5,7 +5,7 @@ should speak in goals and safe states.
 
 ## State machine
 
-\`\`\`text
+```text
 not_installed
   → installed
   → callback_choice
@@ -14,68 +14,68 @@ not_installed
   → connected
   → operating
   → logged_out
-\`\`\`
+```
 
-Terminal states are \`expired\`, \`cancelled\`, \`provider_outcome_unknown\` and
-\`recovery_required\`. They require the action described in the troubleshooting
+Terminal states are `expired`, `cancelled`, `provider_outcome_unknown` and
+`recovery_required`. They require the action described in the troubleshooting
 guide.
 
 ## What the user sees
 
 ### Connect
 
-\`\`\`text
+```text
 Подключу владельца Gigma. Нужен только номер телефона.
 Токен или пароль присылать не нужно.
-\`\`\`
+```
 
 ### Choose
 
-\`\`\`text
+```text
 Нашёл существующий проект. Войти или зарегистрировать новый?
-\`\`\`
+```
 
 Registration additionally asks for a project name.
 
 ### Callback
 
-\`\`\`text
+```text
 Позвоните на показанный номер с того же телефона.
 Новый звонок запускать не нужно, пока эта попытка ожидает подтверждение.
-\`\`\`
+```
 
 ### Connected
 
-\`\`\`text
+```text
 Вы подключены к проекту «...».
 Сейчас покажу приложения и доступные операции.
-\`\`\`
+```
 
 The agent then reads the safe owner summary and offers the workflow menu.
 
 ### Write confirmation
 
-\`\`\`text
+```text
 Я изменю приложение «...»: ...
 Это затронет ...
 Продолжить?
-\`\`\`
+```
 
 No write starts before explicit approval.
 
 ### Unknown outcome
 
-\`\`\`text
+```text
 Сервер не подтвердил результат операции.
 Я не буду повторять её автоматически. Можно выполнить поддержанную проверку
 или остановить попытку.
-\`\`\`
+```
 
 ### Logout
 
-\`\`\`text
+```text
 Сессия Gigma завершена. Для следующей операции потребуется новое подключение.
-\`\`\`
+```
 
 ## Cross-message rule
 
