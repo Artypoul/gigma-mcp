@@ -69,18 +69,20 @@ The callback state spans multiple chat messages. The agent keeps opaque state
 inside MCP tool state. If the host loses that state, the agent must not ask for
 the capability; it must report that a fresh check or bounded recovery is needed.
 
-## Native mode and OAuth mode
+## Native mode and transport OAuth mode
 
-This package's Codex mapping uses `auth.type: none` so the native dialog tools
-can start the owner callback. Do not run `codex mcp login gigma` in the same
-attempt.
+This package's Codex mapping uses `auth.type: none) so the native dialog tools
+can be discovered without a pasted token. Do not run `codex mcp login gigma`
+in the same attempt.
 
-Host-managed OAuth/PKCE is a separate mode for confidential clients. It has
-different client metadata, redirect, consent, grant and revocation rules. This
-package does not claim that native callback is a replacement for that mode.
+The live server may advertise host-managed OAuth in its initialization
+instructions. That is a separate mode for confidential clients with different
+client metadata, redirect, consent, grant and revocation rules. It is not a
+second step in the native callback flow.
 
-If the installed client does not expose `erp_dialog_*`, stop. Do not replace
-the flow with REST, a guessed endpoint, or a second OAuth attempt.
+If the installed client requires OAuth before it exposes `erp_dialog_*`, stop
+and report a transport contract mismatch. Do not replace the flow with REST, a
+guessed endpoint, or a second OAuth attempt.
 
 ## Server availability
 
@@ -104,5 +106,5 @@ workspace in plain language, and offer:
 ## Troubleshooting
 
 Use [the troubleshooting guide](mcp-troubleshooting.md) for expired callbacks,
-lost state, rate limits, unknown outcomes, disabled transport, and MCP Apps
-fallback behavior.
+lost state, rate limits, unknown outcomes, disabled transport, OAuth/native
+mismatch and MCP Apps fallback behavior.
