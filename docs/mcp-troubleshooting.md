@@ -9,7 +9,8 @@ Installation only adds the MCP transport and skills. Start a new chat and write
 
 Stop. The active client has not exposed the required native contract. Do not
 replace it with REST, \`api.gigma.ru\`, a guessed alias or a second OAuth flow.
-Check the installed plugin version and the server's \`tools/list\`.
+Never execute arbitrary REST or arbitrary SQL from this package. Check the
+installed plugin version and the server's \`tools/list\`.
 
 ## The server is disabled
 
