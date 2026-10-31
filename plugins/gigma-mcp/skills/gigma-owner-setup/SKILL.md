@@ -18,6 +18,6 @@ and transport troubleshooting.
 - After connect, call \`erp_dialog_me\` and offer the project menu.
 - On logout, discard the session capability.
 
-Use [mcp-client-setup](../../../docs/mcp-client-setup.md) and
-[mcp-troubleshooting](../../../docs/mcp-troubleshooting.md) as the user-facing
+Use [mcp-client-setup](../../../../docs/mcp-client-setup.md) and
+[mcp-troubleshooting](../../../../docs/mcp-troubleshooting.md) as the user-facing
 source.
