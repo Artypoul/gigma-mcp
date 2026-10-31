@@ -5,7 +5,7 @@ description: Safely inspect and manage owner workspaces, applications and client
 
 # Owner project operations
 
-Use discovered schemas from the active \`gigma\` server.
+Use discovered schemas from the active `gigma` server.
 
 Read first:
 
