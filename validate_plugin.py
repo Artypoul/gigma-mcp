@@ -136,14 +136,15 @@ def main() -> int:
     for document in (readme, package_readme):
         for marker in (
             MCP_URL,
-            "MCP Apps",
-            "text fallback",
+            "text callback flow",
             "erp_dialog_check",
             "erp_dialog_connect",
             "codex mcp login gigma",
         ):
             if marker not in document:
                 raise ValueError(f"README missing {marker!r}")
+        if "MCP Apps" in document:
+            raise ValueError("public README must not advertise MCP Apps UI")
     if "docs/mcp-client-setup.md" not in readme:
         raise ValueError("root README missing client setup link")
     if "docs/gigma-project-workflows.md" not in readme:
@@ -159,7 +160,7 @@ def main() -> int:
         REQUIRED_DOCS + REQUIRED_SKILLS + (ROOT / "README.md", PACKAGE / "README.md")
     )
 
-    print("Validation OK: Gigma MCP manifests, endpoint, native flow, docs and skills")
+    print("Validation OK: Gigma MCP manifests, endpoint, text flow, docs and skills")
     return 0
 
 

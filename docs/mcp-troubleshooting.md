@@ -72,10 +72,12 @@ Report the bounded error without raw provider or database details. Re-read the
 safe resource if the contract supports it. Unknown outcomes require an explicit
 operator decision, not a blind retry.
 
-## MCP Apps card is not visible
+## Text flow only
 
-Use the text fallback. The server-side callback sequence is the same. The host
-must still respect explicit consent before `erp_dialog_start`.
+All clients should use the text callback flow. The public package does not
+advertise or depend on optional UI card. If a client still renders a card, that
+behavior comes from live backend metadata and requires a separate backend change.
+The text callback sequence remains the source of truth.
 
 ## Transport URL or redirect mismatch
 
