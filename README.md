@@ -23,6 +23,20 @@ claude plugin install gigma-mcp@gigma-mcp
 Cursor can install `gigma-mcp` from the repository marketplace. The package
 also includes a manual `mcp.json` for clients that support direct MCP setup.
 
+If `codex mcp list` already contains a manually added server named `gigma`,
+remove that old entry before installing this package:
+
+```text
+codex mcp remove gigma
+codex plugin marketplace add https://github.com/Artypoul/gigma-mcp.git
+codex plugin add gigma-mcp@gigma-mcp
+```
+
+Do not run `codex mcp login gigma`. This package uses the unauthenticated MCP
+transport only to expose the Native Chat callback tools; the agent completes
+owner login through `erp_dialog_check` → `erp_dialog_start` →
+`erp_dialog_status` → `erp_dialog_connect`.
+
 ## Connect Gigma
 
 After installation, open a new agent chat and write:

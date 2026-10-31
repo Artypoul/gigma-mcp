@@ -3,7 +3,14 @@
   "mcpServers": {
     "gigma": {
       "type": "streamable-http",
-      "url": "https://api.auth.gigma.ru/mcp/owner"
+      "url": "https://api.auth.gigma.ru/mcp/owner",
+      "extensions": {
+        "com.openai": {
+          "auth": {
+            "type": "none"
+          }
+        }
+      }
     }
   }
 }

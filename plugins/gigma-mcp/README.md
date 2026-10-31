@@ -26,6 +26,11 @@ For a manual setup, use the package's `mcp.json` in the Cursor MCP settings.
 
 ## What the agent does after installation
 
+The plugin is named `gigma-mcp`; its bundled MCP server keeps the canonical
+server id `gigma`. The Codex manifest marks the connection as `auth.type:
+none`: Native Chat callback is performed by MCP tools, not by host-managed
+OAuth.
+
 The shared `gigma-owner-auth` skill teaches the agent to call
 `erp_dialog_check`, `erp_dialog_start`, `erp_dialog_status`, and
 `erp_dialog_connect`, then use the opaque session capability for business

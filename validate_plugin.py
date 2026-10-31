@@ -42,10 +42,13 @@ def main() -> int:
             raise ValueError(f"{path} points at {source_path!r}")
 
     mcp = load(PACKAGE / "mcp.json")
-    if mcp["mcpServers"]["gigma"]["url"] != MCP_URL:
+    server = mcp["mcpServers"].get("gigma")
+    if not isinstance(server, dict) or server["url"] != MCP_URL:
         raise ValueError("MCP URL mismatch")
-    if mcp["mcpServers"]["gigma"]["type"] != "streamable-http":
+    if server["type"] != "streamable-http":
         raise ValueError("MCP transport mismatch")
+    if server["extensions"]["com.openai"]["auth"]["type"] != "none":
+        raise ValueError("Codex must use Native callback without OAuth login")
 
     portable = load(PACKAGE / "plugin.json")
     codex = load(PACKAGE / ".codex-plugin/plugin.json")
@@ -54,7 +57,7 @@ def main() -> int:
     for manifest in (portable, codex, claude, cursor):
         if manifest.get("name") != "gigma-mcp":
             raise ValueError("plugin manifest name mismatch")
-        if manifest.get("version") != "0.1.0":
+        if manifest.get("version") != "0.1.1":
             raise ValueError("plugin manifest version mismatch")
     if codex.get("mcpServers") != "./mcp.json":
         raise ValueError("Codex MCP mapping mismatch")
@@ -81,6 +84,8 @@ def main() -> int:
             raise ValueError(f"skill missing {required}")
     if "codex mcp login" in text and "OAuth" not in text:
         raise ValueError("skill does not explain the separate OAuth mode")
+    if "Use the `gigma` MCP server" not in text:
+        raise ValueError("skill lost the canonical gigma MCP server id")
     if any(
         secret in text.lower()
         for secret in ("client_secret", "access_token", "refresh_token")
@@ -90,6 +95,8 @@ def main() -> int:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     if "https://github.com/Artypoul/gigma-mcp.git" not in readme:
         raise ValueError("README missing public repository install URL")
+    if "codex mcp remove gigma" not in readme or "codex mcp login gigma" not in readme:
+        raise ValueError("README missing stale OAuth server migration guidance")
     if "api.auth.gigma.ru.git" in readme:
         raise ValueError("README points users at the backend repository")
 
