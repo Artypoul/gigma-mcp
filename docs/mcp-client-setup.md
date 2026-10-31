@@ -69,11 +69,17 @@ The callback state spans multiple chat messages. The agent keeps opaque state
 inside MCP tool state. If the host loses that state, the agent must not ask for
 the capability; it must report that a fresh check or bounded recovery is needed.
 
-## Native mode and transport OAuth mode
+## Text callback flow and transport OAuth mode
 
-The package transport uses the slash route `https://api.auth.gigma.ru/mcp/owner/` to avoid a POST redirect. This package's Codex mapping uses `auth.type: none` so the native dialog tools
-can be discovered without a pasted token. Do not run `codex mcp login gigma`
-in the same attempt.
+The package transport uses the slash route
+`https://api.auth.gigma.ru/mcp/owner/` to avoid a POST redirect. This
+package's Codex mapping uses `auth.type: none) so the native dialog tools can
+be discovered without a pasted token. Do not run `codex mcp login gigma` in the
+same attempt.
+
+All clients use the text callback flow. The public package does not advertise or
+depend on MCP Apps UI. If a client still renders a UI card, that metadata comes
+from the live backend and requires a separate backend change to remove.
 
 The live server may advertise host-managed OAuth in its initialization
 instructions. That is a separate mode for confidential clients with different
@@ -106,5 +112,5 @@ workspace in plain language, and offer:
 ## Troubleshooting
 
 Use [the troubleshooting guide](mcp-troubleshooting.md) for expired callbacks,
-lost state, rate limits, unknown outcomes, disabled transport, OAuth/native
-mismatch and MCP Apps fallback behavior.
+lost state, rate limits, unknown outcomes, disabled transport and OAuth/native
+mismatch.
