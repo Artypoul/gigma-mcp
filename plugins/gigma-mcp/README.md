@@ -48,7 +48,7 @@ confidential transport clients. If the active host requires OAuth before
 exposing `erp_dialog_*`, stop and report a transport contract mismatch instead
 of mixing OAuth with the callback attempt.
 
-The public package does not advertise or depend on MCP Apps UI. If a client
+The public package does not advertise or depend on optional UI card. If a client
 still renders a UI card, that comes from live backend metadata and requires a
 separate backend change to remove.
 
