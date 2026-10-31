@@ -75,7 +75,7 @@ operator decision, not a blind retry.
 ## Text flow only
 
 All clients should use the text callback flow. The public package does not
-advertise or depend on MCP Apps UI. If a client still renders a card, that
+advertise or depend on optional UI card. If a client still renders a card, that
 behavior comes from live backend metadata and requires a separate backend change.
 The text callback sequence remains the source of truth.
 
