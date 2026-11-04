@@ -32,6 +32,10 @@ reused PID, unrecorded process or unresolved startup. Background windows stay
 hidden. `test-services.ps1` checks ownership failures without starting or
 stopping services. The API itself is not launched by this dependency helper.
 
+The full cold stop/start cycle of these three review dependencies was verified
+on 2026-11-04, followed by status and ownership checks with refreshed process
+records. This local lifecycle evidence does not prove production deployment.
+
 Run a selected backend suite through the dedicated launcher:
 
 ```powershell

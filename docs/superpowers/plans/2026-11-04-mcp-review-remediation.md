@@ -39,13 +39,13 @@ are changed. Local test services listen on loopback and use disposable test data
 - [x] Validate all eight native dialog tools and their compatible input schemas;
   reject broken credentials/session-capability contracts with negative fixtures.
 - [x] Bundle documentation with the installed plugin and validate packed links.
-- [x] Publish a consistent patch version and update release documentation.
+- [ ] Publish a consistent patch version and update release documentation.
 
 ## Task 4: Verification and delivery
 
-- [ ] Restore the reusable Python/PostgreSQL/Redis/MinIO test environment under
+- [x] Restore the reusable Python/PostgreSQL/Redis/MinIO test environment under
   `D:\Development\gigma-auth`; preserve existing development data and secrets.
-- [ ] Document commands, isolation boundaries and results in both runbooks.
+- [x] Document commands, isolation boundaries and results in both runbooks.
 - [ ] Run focused regressions, PostgreSQL suites, applicable full-suite checks,
   Ruff, type/import checks, AIP evidence and current-diff independent review.
 - [ ] Publish code PRs, inspect exact-head required checks and review comments.
