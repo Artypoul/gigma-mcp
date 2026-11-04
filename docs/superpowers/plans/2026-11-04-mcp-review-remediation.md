@@ -46,12 +46,41 @@ are changed. Local test services listen on loopback and use disposable test data
 - [x] Restore the reusable Python/PostgreSQL/Redis/MinIO test environment under
   `D:\Development\gigma-auth`; preserve existing development data and secrets.
 - [x] Document commands, isolation boundaries and results in both runbooks.
-- [ ] Run focused regressions, PostgreSQL suites, applicable full-suite checks,
+- [x] Run focused regressions, PostgreSQL suites, applicable full-suite checks,
   Ruff, type/import checks, AIP evidence and current-diff independent review.
-- [ ] Publish code PRs, inspect exact-head required checks and review comments.
+- [x] Publish code PRs, inspect exact-head required checks and review comments.
 - [ ] Follow owner-only merge and existing manual production deployment rules;
   verify deployed revision, health and public MCP contract before completion.
 
 Review focus: post-commit Redis loss, terminal cancellation, expired callbacks
 with valid sessions, foreign resource references, nonempty/possible event rows,
 missing required tools, new credentials in schemas, and installed-package paths.
+
+## Verified delivery evidence
+
+- Backend PR: https://github.com/Artypoul/api.auth.gigma.ru/pull/155 at
+  `46bbd5d4f08f241dd6d8a15e298747620db23252`. Required `CI Ruff / ruff` and
+  `CI Startup / startup` both succeeded on this exact head.
+- Package PR: https://github.com/Artypoul/gigma-mcp/pull/7. Its implementation
+  and environment documentation were verified at
+  `a3cefdbf1981df52d2b2eaa31d72f2ba0e5d52ef`; this repository has no CI checks.
+- Complete backend run: **4199 passed, 126 skipped, 0 failures, 0 errors**,
+  exit 0, 859.40 seconds. Source was the exact backend PR head above. JUnit:
+  `D:\Development\gigma-auth\review\logs\pytest-20a7564604.xml`, SHA-256
+  `472b4da94e62e21f0fa893fa5da6c8708028877a681b2f53b0357c30d033736c`.
+  Two skips explicitly reflect Windows symlink privilege WinError 1314; the
+  remaining 124 were existing suite skips. The first broad run's failures and
+  setup errors were corrected before this successful full run.
+- Package: 26 tests passed; bundle synchronization, installed-subtree validation,
+  Ruff and metadata-only live probe passed. Public server currently exposes 74
+  tools; the reviewed backend adds two plan revision read tools.
+- Backend: strict mypy passed for 580 files, all 12 import contracts passed,
+  Ruff/format and startup passed, and the committed-head AIP check passed for
+  14 relevant files. Targeted real PostgreSQL/payment/tenant regressions passed.
+- Independent read-only reviewer verdicts and exact blob receipts are retained
+  in each repository's `.superpowers/reviews/2026-11-04-*-review*.json` files.
+  GitHub's separate Codex review service reported an execution failure, with no
+  published review or inline threads; it is not counted as a successful review.
+- Both PRs have no outstanding published inline comments or submitted reviews.
+  Merge and production deployment have not been performed. Owner-only merge and
+  the explicit production deployment boundary remain in effect.
