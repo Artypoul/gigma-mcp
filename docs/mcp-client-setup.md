@@ -27,7 +27,8 @@ codex mcp list
 
 Keep one `gigma` registration only. Close old Gigma chats and restart the
 client after removing a manual entry or updating the plugin. Before connecting
-an owner, run the read-only live contract check from the repository:
+an owner, run the read-only live contract check from either the installed plugin
+directory (alongside its `README.md` and `mcp.json`) or the repository checkout root:
 
 ```text
 python check_live_contract.py
@@ -66,7 +67,7 @@ The expected sequence is:
 
 ```text
 erp_dialog_check
-→ one consent path: MCP Apps choice UI click OR text login/register choice
+→ one explicit text login/register choice
 → erp_dialog_start
 → callback call from the same phone
 → erp_dialog_status
@@ -74,14 +75,11 @@ erp_dialog_check
 → erp_dialog_me
 ```
 
-After `erp_dialog_check`, these paths are mutually exclusive. If the host
-shows the MCP Apps choice UI/card, do not repeat the login/register question in
-text and do not call `erp_dialog_start` from the agent; the UI click is the
-only consent path and the card calls `erp_dialog_start`. If UI metadata/card is
-absent or the host does not render it, use the text fallback once: ask the
-login/register question and call `erp_dialog_start` only after explicit textual
-consent. Registration asks for a project name. Login does not. Never combine
-the paths or start the same dialog twice.
+After `erp_dialog_check`, ask the login/register question once and call
+`erp_dialog_start` only after explicit textual consent. Registration asks for
+a project name. Login does not. A host approval for the project check is not
+the login/register choice. If a choice card appears, stop, report the metadata
+mismatch and clean up the client registration before another attempt.
 
 The callback state spans multiple chat messages. The agent keeps opaque state
 inside MCP tool state. If the host loses that state, the agent must not ask for
@@ -91,15 +89,12 @@ the capability; it must report that a fresh check or bounded recovery is needed.
 
 The package transport uses the slash route
 `https://api.auth.gigma.ru/mcp/owner/` to avoid a POST redirect. This
-package's Codex mapping uses `auth.type: none) so the native dialog tools can
+package's Codex mapping uses `auth.type: none` so the native dialog tools can
 be discovered without a pasted token. Do not run `codex mcp login gigma` in the
 same attempt.
 
-All clients use the same text callback tools after the choice step. A compatible
-host may render an MCP Apps choice card from live backend metadata; when it does,
-follow the UI path above and do not also run the text fallback. The package does
-not require UI support. If the host has no UI metadata/card or does not render
-it, follow the text fallback above.
+All clients use the same text callback tools and textual consent step. This
+package expects a text-only backend contract and does not execute a UI choice.
 
 The live server may advertise host-managed OAuth in its initialization
 instructions. That is a separate mode for confidential clients with different

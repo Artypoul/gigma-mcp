@@ -18,6 +18,9 @@ codex plugin add gigma-mcp@gigma-mcp
 Keep exactly one `gigma` registration in the active client. Remove an old
 manual entry, close old Gigma chats, restart the client, and verify the live
 contract with `python check_live_contract.py` before starting a new chat.
+Run that command from this installed plugin directory, which contains
+`README.md`, `mcp.json` and the bundled [checker](check_live_contract.py).
+The checker also runs from the root of a repository checkout.
 
 Claude Code:
 
@@ -30,16 +33,16 @@ Cursor can install the `gigma-mcp` entry from the repository marketplace or
 use the package's `mcp.json` in Cursor MCP settings.
 
 For the complete first-run procedure, read
-[docs/mcp-client-setup.md](../../docs/mcp-client-setup.md).
+[docs/mcp-client-setup.md](docs/mcp-client-setup.md).
 
 ## Native owner connection
 
 The package uses one callback choice path at a time:
 
-`erp_dialog_check` → one UI click or explicit text login/registration choice →
+`erp_dialog_check` → explicit text login/registration choice →
 `erp_dialog_start` → callback call → `erp_dialog_status` →
 `erp_dialog_connect`.
-The text callback flow remains the fallback when the host does not render UI.
+All clients use the text callback flow.
 
 The agent shows only the callback number and safe project results. Opaque
 dialog and session capabilities remain in MCP tool state. They are never
@@ -71,9 +74,9 @@ The agent first reads the safe owner/workspace summary and then offers:
 Writes require the normal approval prompt. Credentials, provider secrets,
 logo uploads and other confidential HTTP operations are not moved into chat.
 
-Read [the project workflow guide](../../docs/gigma-project-workflows.md),
-[the capability matrix](../../docs/mcp-capability-matrix.md), and
-[the troubleshooting guide](../../docs/mcp-troubleshooting.md).
+Read [the project workflow guide](docs/gigma-project-workflows.md),
+[the capability matrix](docs/mcp-capability-matrix.md), and
+[the troubleshooting guide](docs/mcp-troubleshooting.md).
 
 The package does not contain credentials, callback proofs, a local MCP server,
 or a second implementation of the Gigma authentication flow.

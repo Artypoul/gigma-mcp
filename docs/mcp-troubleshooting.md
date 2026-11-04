@@ -4,7 +4,8 @@
 
 The active client must use one `gigma` registration and one consent path. Remove
 any manually configured `gigma` server, close old Gigma chats, restart the
-client, and run `python check_live_contract.py`. If the check reports a
+client, and run `python check_live_contract.py` from the installed plugin
+directory (alongside `mcp.json`) or the repository checkout root. If the check reports a
 text-only contract, a remaining UI card comes from stale or different client
 metadata. Do not answer the same login/registration choice twice.
 

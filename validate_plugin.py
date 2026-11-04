@@ -6,11 +6,15 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
+
+from sync_plugin_docs import sync_bundle
 
 ROOT = Path(__file__).resolve().parent
 PACKAGE = ROOT / "plugins" / "gigma-mcp"
 MCP_URL = "https://api.auth.gigma.ru/mcp/owner/"
 LIVE_CHECK = ROOT / "check_live_contract.py"
+VERSION = "0.2.2"
 
 REQUIRED_DOCS = (
     ROOT / "docs/mcp-client-setup.md",
@@ -34,7 +38,9 @@ REQUIRED_SKILLS = (
 SECRET_VALUE_PATTERNS = (
     re.compile(r"Bearer\s+eyJ[a-zA-Z0-9._-]+"),
     re.compile(r"-----BEGIN [A-Z ]+-----"),
-    re.compile(r'"(?:access_token|refresh_token|client_secret|provider_secret)"\s*:\s*"[^"]+"'),
+    re.compile(
+        r'"(?:access_token|refresh_token|client_secret|provider_secret)"\s*:\s*"[^"]+"'
+    ),
 )
 
 
@@ -55,6 +61,25 @@ def assert_no_secret_values(paths: tuple[Path, ...]) -> None:
         for pattern in SECRET_VALUE_PATTERNS:
             if pattern.search(text):
                 raise ValueError(f"secret-like value found in {path}")
+
+
+def validate_packaged_links(package: Path) -> None:
+    """Resolve links inside an isolated installed subtree, without repo parents."""
+    root = package.resolve()
+    for document in root.rglob("*.md"):
+        for href in re.findall(r"\[[^\]]*\]\(([^)]+)\)", read_text(document)):
+            parsed = urlsplit(href.strip("<>"))
+            if parsed.scheme or parsed.netloc or not parsed.path:
+                continue
+            target = (document.parent / unquote(parsed.path)).resolve()
+            if not target.is_relative_to(root):
+                raise ValueError(
+                    f"packaged link escapes plugin: {document.relative_to(root)} -> {href}"
+                )
+            if not target.is_file():
+                raise ValueError(
+                    f"missing packaged link: {document.relative_to(root)} -> {href}"
+                )
 
 
 def main() -> int:
@@ -83,6 +108,12 @@ def main() -> int:
     for path in REQUIRED_DOCS + REQUIRED_SKILLS + (LIVE_CHECK,):
         if not path.is_file():
             raise FileNotFoundError(path)
+    stale_docs = sync_bundle(check=True)
+    if stale_docs:
+        raise ValueError(
+            f"bundled content is stale; run python sync_plugin_docs.py: {stale_docs}"
+        )
+    validate_packaged_links(PACKAGE)
 
     mcp = load(PACKAGE / "mcp.json")
     server = mcp["mcpServers"].get("gigma")
@@ -100,8 +131,14 @@ def main() -> int:
     for manifest in (portable, codex, claude, cursor):
         if manifest.get("name") != "gigma-mcp":
             raise ValueError("plugin manifest name mismatch")
-        if manifest.get("version") != "0.2.1":
+        if manifest.get("version") != VERSION:
             raise ValueError("plugin manifest version mismatch")
+    cursor_marketplace = load(ROOT / ".cursor-plugin/marketplace.json")
+    if (
+        cursor_marketplace["metadata"]["version"] != VERSION
+        or cursor_marketplace["plugins"][0]["version"] != VERSION
+    ):
+        raise ValueError("Cursor marketplace version mismatch")
     if codex.get("mcpServers") != "./mcp.json":
         raise ValueError("Codex MCP mapping mismatch")
     if claude.get("mcpServers", {}).get("gigma", {}).get("url") != MCP_URL:
@@ -126,7 +163,7 @@ def main() -> int:
         "recovery_required",
         "exactly one consent path",
         "do not ask",
-        "text fallback",
+        "text callback",
         "After `erp_dialog_start` returns",
         "not the callback number",
     ):
@@ -179,7 +216,9 @@ def main() -> int:
     if "docs/gigma-project-workflows.md" not in readme:
         raise ValueError("root README missing workflow link")
 
-    documentation = readme + package_readme + "".join(read_text(p) for p in REQUIRED_DOCS)
+    documentation = (
+        readme + package_readme + "".join(read_text(p) for p in REQUIRED_DOCS)
+    )
     if "api.auth.gigma.ru.git" in documentation:
         raise ValueError("documentation points at backend repository")
     if "arbitrary REST" not in documentation or "arbitrary SQL" not in documentation:

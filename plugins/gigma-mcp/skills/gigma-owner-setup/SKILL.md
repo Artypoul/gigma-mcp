@@ -19,6 +19,6 @@ repeat its steps here.
 - Route connection, callback state, `erp_dialog_me` and logout to
   `gigma-owner-auth`.
 
-Use [mcp-client-setup](../../../../docs/mcp-client-setup.md) and
-[mcp-troubleshooting](../../../../docs/mcp-troubleshooting.md) as the user-facing
+Use [mcp-client-setup](../../docs/mcp-client-setup.md) and
+[mcp-troubleshooting](../../docs/mcp-troubleshooting.md) as the user-facing
 source.
