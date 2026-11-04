@@ -1,5 +1,9 @@
 # Native callback buttons Implementation Plan
 
+> Historical plan: this proposal is not the active deployment contract. The
+> current package expects a text-only live contract and keeps UI and text
+> consent paths mutually exclusive.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a standard MCP Apps choice card to the owner callback check while preserving the existing text flow in Claude Code and Cursor.

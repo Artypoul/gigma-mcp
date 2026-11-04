@@ -15,6 +15,10 @@ codex plugin marketplace add https://github.com/Artypoul/gigma-mcp.git
 codex plugin add gigma-mcp@gigma-mcp
 ```
 
+Keep exactly one `gigma` registration in the active client. Remove an old
+manual entry, close old Gigma chats, restart the client, and verify the live
+contract with `python check_live_contract.py` before starting a new chat.
+
 Claude Code:
 
 ```text
@@ -30,11 +34,12 @@ For the complete first-run procedure, read
 
 ## Native owner connection
 
-The package uses a text callback flow:
+The package uses one callback choice path at a time:
 
-`erp_dialog_check` → explicit login or registration choice →
+`erp_dialog_check` → one UI click or explicit text login/registration choice →
 `erp_dialog_start` → callback call → `erp_dialog_status` →
 `erp_dialog_connect`.
+The text callback flow remains the fallback when the host does not render UI.
 
 The agent shows only the callback number and safe project results. Opaque
 dialog and session capabilities remain in MCP tool state. They are never
@@ -49,8 +54,9 @@ exposing `erp_dialog_*`, stop and report a transport contract mismatch instead
 of mixing OAuth with the callback attempt.
 
 The public package does not advertise or depend on optional UI card. If a client
-still renders a UI card, that comes from live backend metadata and requires a
-separate backend change to remove.
+still renders a UI card while the live contract is text-only, the client is
+using stale or different registration metadata; restart it and do not answer
+the same choice twice.
 
 ## After connection
 

@@ -12,11 +12,18 @@ Use the exact POST transport endpoint:
 https://api.auth.gigma.ru/mcp/owner/
 ```
 
-Perform only:
+Run the repository checker:
+
+```text
+python check_live_contract.py
+```
+
+The checker performs only:
 
 1. `initialize`;
 2. `notifications/initialized`;
-3. `tools/list`.
+3. `tools/list`;
+4. `resources/list`.
 
 Never call a dialog tool, business tool, provider operation, OAuth login or
 anything that requires a phone, capability or token.
@@ -27,13 +34,18 @@ anything that requires a phone, capability or token.
 - owner MCP server identity and protocol response;
 - native dialog tools are present;
 - text callback tools remain callable without a pasted token;
-- package documentation does not advertise optional UI card;
-- metadata and tool descriptions contain no capability, token or proof values;
+- the text-only contract does not expose UI capability, `resourceUri` or an
+  MCP Apps resource;
+- `erp_dialog_check` is annotated as stateful but non-destructive, idempotent and
+  closed-world (`readOnlyHint=false`, `destructiveHint=false`,
+  `openWorldHint=false`);
 - the package's native-flow documentation matches the live contract.
 
-The live backend may still expose UI metadata from its own resource registry. That
-is not part of this public package contract. Removing that runtime metadata
-requires a separate backend change.
+The package supports exactly one choice path after `erp_dialog_check`: a
+rendered UI card owns consent, or the agent uses the text fallback. It must
+never present both. If this text-only check finds UI metadata, the active client
+is using a different backend revision, stale metadata or another registration;
+stop and clean up the client before continuing.
 
 A live pass proves contract reachability only. It does not prove callback delivery,
 Redis/PostgreSQL recovery, provider readiness, staging rehearsal, production

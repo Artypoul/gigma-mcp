@@ -7,7 +7,8 @@ description: Route plain-language Gigma owner goals to the correct MCP workflow.
 
 Route by the user's goal, not by an internal tool name.
 
-- connect or register → `gigma-owner-setup` + `gigma-owner-auth`;
+- install, verify or troubleshoot transport → `gigma-owner-setup`;
+- connect or register → `gigma-owner-auth`;
 - show project or applications → `gigma-owner-project-ops`;
 - create or change an application → `gigma-owner-project-ops`;
 - create tariffs, catalog entries or subscriptions → `gigma-owner-subscriptions`;

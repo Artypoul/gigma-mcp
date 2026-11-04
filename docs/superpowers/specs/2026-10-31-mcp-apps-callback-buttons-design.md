@@ -1,5 +1,9 @@
 # Native callback choice buttons
 
+> Historical design note: this proposal is not the active deployment contract.
+> The current package uses the text-only live contract with mutually exclusive
+> UI/text handling documented in the client setup and authentication skill.
+
 ## Intent
 
 After `erp_dialog_check` finds an existing Gigma project, the user should be

@@ -32,6 +32,15 @@ codex plugin marketplace add https://github.com/Artypoul/gigma-mcp.git
 codex plugin add gigma-mcp@gigma-mcp
 ```
 
+Keep exactly one `gigma` registration in the active client. After removing an
+old manual entry or updating the plugin, close old Gigma chats and restart the
+client so it cannot reuse cached tool metadata. Verify the deployed text-only
+contract with:
+
+```text
+python check_live_contract.py
+```
+
 Claude Code:
 
 ```text
@@ -75,8 +84,8 @@ The agent will:
 
 1. ask for the owner phone without asking for a token or password;
 2. check whether a project exists;
-3. ask you to choose login or registration;
-4. ask for a project name only for registration;
+3. show one login or registration choice path;
+4. ask for a project name only for text-based registration;
 5. show a callback number;
 6. wait for a call from the same phone;
 7. verify the callback;
@@ -88,8 +97,10 @@ checking its status. If the host loses that state, the agent must use the
 documented recovery path and never ask you to paste a capability.
 
 All clients use the text callback flow. The public package does not advertise or
-depend on an optional UI card. If a client still renders a UI card, that metadata is
-coming from the live backend and requires a separate backend change to remove.
+depend on an optional UI card. If a client still renders a UI card, that metadata
+comes from a stale or different client registration, cached metadata, or the live
+backend. Do not answer the same choice twice; restart the client and run the live
+contract check before continuing.
 
 ## What to ask the agent
 

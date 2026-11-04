@@ -37,6 +37,14 @@ guide.
 
 Registration additionally asks for a project name.
 
+The choice step has mutually exclusive consent paths. If the host renders the
+MCP Apps choice UI/card after `erp_dialog_check`, the agent does not repeat
+this text question and does not call `erp_dialog_start` itself. The user's UI
+click is the only consent path, and the card starts the selected action. If UI
+metadata/card is absent or the host does not render it, use this text fallback
+once and call `erp_dialog_start` only after the user's explicit textual
+consent. Never present both paths for the same check.
+
 ### Callback
 
 ```text

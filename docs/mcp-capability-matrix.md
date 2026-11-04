@@ -7,6 +7,7 @@ matrix is a user-facing map, not a replacement for the server schemas.
 
 | Goal | Tool group | Mode | Boundary |
 |---|---|---|---|
+| Check owner project | `erp_dialog_check` | stateful | Idempotent short-lived dialog state only; non-destructive, no callback, consent or session |
 | Connect owner | `erp_dialog_*` | read/write | Native callback only; capabilities stay in MCP state |
 | Show current workspace | `erp_dialog_me` | read | Safe summary only |
 | Disconnect | `erp_dialog_logout` | write | Durable session revoke and capability discard |
