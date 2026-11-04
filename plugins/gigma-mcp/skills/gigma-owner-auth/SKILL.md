@@ -26,20 +26,14 @@ When the user asks to connect an owner workspace:
 1. Ask for the owner phone and create a cryptographically secure
    `idempotency_key` matching `[A-Za-z0-9_-]{32,128}`. Call
    `erp_dialog_check`.
-2. Use exactly one consent path for this check. If the host has rendered the
-   MCP Apps choice UI/card from the `erp_dialog_check` result, do not ask the
-   same login/registration question in text and do not call
-   `erp_dialog_start` yourself. The UI click is the only consent path; the
-   card invokes `erp_dialog_start` with `consent: true`. If UI metadata/card
-   is absent or the host does not render it, use the text fallback: present
-   the `project_exists` result and ask the user to choose login or
-   registration once. Do not infer consent from that result. Ask for a
-   project name only if the user chooses registration, and call
-   `erp_dialog_start` only after explicit textual consent with `consent: true`;
-   login omits `project_name`. Never show both paths or start the dialog twice.
-   A generic host approval prompt for executing `erp_dialog_check` is not the
-   login/registration choice UI; after that approval, use the text fallback
-   once unless a real choice card is rendered.
+2. Use exactly one consent path for this check: the text callback flow.
+   Present the `project_exists` result and ask the user to choose login or
+   registration once. Do not infer consent from that result. Ask for a project
+   name only if the user chooses registration, and call `erp_dialog_start`
+   only after explicit textual consent with `consent: true`; login omits
+   `project_name`. A generic host approval for `erp_dialog_check` is not this
+   choice. If UI metadata or a choice card appears, stop and report stale or
+   incompatible transport metadata; do not use the card or start a second path.
 3. After `erp_dialog_start` returns, show its callback number and ask the user
    to call it from the phone they supplied. `erp_dialog_check` returns project
    state and dialog capability, not the callback number. Keep the same

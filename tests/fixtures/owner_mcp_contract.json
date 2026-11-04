@@ -1,0 +1,361 @@
+{
+  "provenance": {
+    "repository": "https://github.com/Artypoul/api.auth.gigma.ru",
+    "review_base": "2aff556959fee23d8f6e0df8364f79058fdff84c",
+    "source": "Actual build_owner_mcp + register_application_tools + StrictOwnerMCP.list_tools without Bearer; metadata only, no tool invoked. serverInfo version/protocol are probe fixtures, not a deployed-version assertion."
+  },
+  "initialize": {
+    "result": {
+      "protocolVersion": "2025-06-18",
+      "serverInfo": {
+        "name": "Gigma Auth: MCP Owner",
+        "version": "1.30.0"
+      },
+      "capabilities": {
+        "tools": {
+          "listChanged": false
+        },
+        "resources": {
+          "subscribe": false,
+          "listChanged": false
+        }
+      }
+    }
+  },
+  "tools_list": {
+    "result": {
+      "tools": [
+        {
+          "name": "erp_list_applications",
+          "description": "List the owner's applications. Page size defaults to 50 and is capped at 200.",
+          "inputSchema": {
+            "additionalProperties": false,
+            "properties": {
+              "page_size": {
+                "default": 0,
+                "minimum": 0,
+                "title": "Page Size",
+                "type": "integer"
+              },
+              "page_token": {
+                "default": "",
+                "maxLength": 2048,
+                "title": "Page Token",
+                "type": "string"
+              },
+              "query": {
+                "default": "",
+                "maxLength": 512,
+                "title": "Query",
+                "type": "string"
+              },
+              "is_website": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Is Website"
+              },
+              "show_deleted": {
+                "default": false,
+                "title": "Show Deleted",
+                "type": "boolean"
+              },
+              "session_capability": {
+                "type": "string",
+                "pattern": "^mcp_d_s_[a-f0-9]{64}$",
+                "description": "Secret session capability from erp_dialog_connect. Never display or log."
+              }
+            },
+            "title": "ListApplicationsInput",
+            "type": "object",
+            "required": [
+              "session_capability"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "erp_get_application",
+          "description": "Read an application by its canonical resource name.",
+          "inputSchema": {
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "maxLength": 128,
+                "pattern": "^workspaces/[1-9][0-9]*/applications/[a-z][a-z0-9-]{2,61}[a-z0-9]$",
+                "title": "Name",
+                "type": "string"
+              },
+              "session_capability": {
+                "type": "string",
+                "pattern": "^mcp_d_s_[a-f0-9]{64}$",
+                "description": "Secret session capability from erp_dialog_connect. Never display or log."
+              }
+            },
+            "required": [
+              "name",
+              "session_capability"
+            ],
+            "title": "ApplicationNameInput",
+            "type": "object"
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "erp_dialog_check",
+          "description": "Проверяет наличие проекта по телефону и возвращает безопасный результат; callback number появляется только после erp_dialog_start; внутреннюю capability не показывать.",
+          "inputSchema": {
+            "additionalProperties": false,
+            "properties": {
+              "phone": {
+                "maxLength": 40,
+                "minLength": 10,
+                "title": "Phone",
+                "type": "string"
+              },
+              "idempotency_key": {
+                "maxLength": 128,
+                "minLength": 32,
+                "pattern": "^[A-Za-z0-9_-]{32,128}$",
+                "title": "Idempotency Key",
+                "type": "string"
+              }
+            },
+            "required": [
+              "phone",
+              "idempotency_key"
+            ],
+            "title": "_DialogCheckInput",
+            "type": "object"
+          },
+          "annotations": {
+            "readOnlyHint": false,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "erp_dialog_start",
+          "description": "После согласия начинает вход или регистрацию через callback-звонок и возвращает только callback number.",
+          "inputSchema": {
+            "additionalProperties": false,
+            "properties": {
+              "dialog_capability": {
+                "pattern": "^mcp_d_a_[a-f0-9]{64}$",
+                "title": "Dialog Capability",
+                "type": "string"
+              },
+              "action": {
+                "pattern": "^(login|register)$",
+                "title": "Action",
+                "type": "string"
+              },
+              "project_name": {
+                "anyOf": [
+                  {
+                    "maxLength": 150,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Project Name"
+              },
+              "consent": {
+                "title": "Consent",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "dialog_capability",
+              "action",
+              "consent"
+            ],
+            "title": "_DialogStartInput",
+            "type": "object"
+          },
+          "annotations": {
+            "readOnlyHint": false,
+            "destructiveHint": true,
+            "idempotentHint": false,
+            "openWorldHint": true
+          }
+        },
+        {
+          "name": "erp_dialog_status",
+          "description": "Читает состояние callback-попытки; новый звонок не запускает.",
+          "inputSchema": {
+            "additionalProperties": false,
+            "properties": {
+              "dialog_capability": {
+                "pattern": "^mcp_d_a_[a-f0-9]{64}$",
+                "title": "Dialog Capability",
+                "type": "string"
+              }
+            },
+            "required": [
+              "dialog_capability"
+            ],
+            "title": "_DialogCapabilityInput",
+            "type": "object"
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "erp_dialog_reconcile",
+          "description": "Явно сверяет callback с провайдером и возвращает фиксированный статус.",
+          "inputSchema": {
+            "additionalProperties": false,
+            "properties": {
+              "dialog_capability": {
+                "pattern": "^mcp_d_a_[a-f0-9]{64}$",
+                "title": "Dialog Capability",
+                "type": "string"
+              }
+            },
+            "required": [
+              "dialog_capability"
+            ],
+            "title": "_DialogCapabilityInput",
+            "type": "object"
+          },
+          "annotations": {
+            "readOnlyHint": false,
+            "destructiveHint": true,
+            "idempotentHint": false,
+            "openWorldHint": true
+          }
+        },
+        {
+          "name": "erp_dialog_connect",
+          "description": "После подтверждения callback создаёт opaque session capability.",
+          "inputSchema": {
+            "additionalProperties": false,
+            "properties": {
+              "dialog_capability": {
+                "pattern": "^mcp_d_a_[a-f0-9]{64}$",
+                "title": "Dialog Capability",
+                "type": "string"
+              }
+            },
+            "required": [
+              "dialog_capability"
+            ],
+            "title": "_DialogCapabilityInput",
+            "type": "object"
+          },
+          "annotations": {
+            "readOnlyHint": false,
+            "destructiveHint": true,
+            "idempotentHint": false,
+            "openWorldHint": true
+          }
+        },
+        {
+          "name": "erp_dialog_cancel",
+          "description": "Отменяет незавершённую callback-попытку.",
+          "inputSchema": {
+            "additionalProperties": false,
+            "properties": {
+              "dialog_capability": {
+                "pattern": "^mcp_d_a_[a-f0-9]{64}$",
+                "title": "Dialog Capability",
+                "type": "string"
+              }
+            },
+            "required": [
+              "dialog_capability"
+            ],
+            "title": "_DialogCapabilityInput",
+            "type": "object"
+          },
+          "annotations": {
+            "readOnlyHint": false,
+            "destructiveHint": true,
+            "idempotentHint": false,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "erp_dialog_me",
+          "description": "Проверяет opaque session capability текущего подключения.",
+          "inputSchema": {
+            "additionalProperties": false,
+            "properties": {
+              "session_capability": {
+                "pattern": "^mcp_d_s_[a-f0-9]{64}$",
+                "title": "Session Capability",
+                "type": "string"
+              }
+            },
+            "required": [
+              "session_capability"
+            ],
+            "title": "_SessionCapabilityInput",
+            "type": "object"
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "erp_dialog_logout",
+          "description": "Завершает chat-native owner MCP session.",
+          "inputSchema": {
+            "additionalProperties": false,
+            "properties": {
+              "session_capability": {
+                "pattern": "^mcp_d_s_[a-f0-9]{64}$",
+                "title": "Session Capability",
+                "type": "string"
+              }
+            },
+            "required": [
+              "session_capability"
+            ],
+            "title": "_SessionCapabilityInput",
+            "type": "object"
+          },
+          "annotations": {
+            "readOnlyHint": false,
+            "destructiveHint": true,
+            "idempotentHint": false,
+            "openWorldHint": false
+          }
+        }
+      ]
+    }
+  },
+  "resources_list": {
+    "result": {
+      "resources": []
+    }
+  }
+}

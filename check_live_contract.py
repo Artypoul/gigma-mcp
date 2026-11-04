@@ -11,14 +11,39 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 DEFAULT_URL = "https://api.auth.gigma.ru/mcp/owner/"
+SERVER_NAME = "Gigma Auth: MCP Owner"
+PROTOCOL_VERSION = "2025-06-18"
 NATIVE_DIALOG_TOOLS = (
     "erp_dialog_check",
     "erp_dialog_start",
     "erp_dialog_status",
+    "erp_dialog_reconcile",
     "erp_dialog_connect",
+    "erp_dialog_cancel",
     "erp_dialog_me",
     "erp_dialog_logout",
 )
+_DIALOG_CAPABILITY = {"type": "string", "pattern": r"^mcp_d_a_[a-f0-9]{64}$"}
+_SESSION_CAPABILITY = {"type": "string", "pattern": r"^mcp_d_s_[a-f0-9]{64}$"}
+_CHECK_PROPERTIES = {
+    "phone": {"type": "string", "minLength": 10, "maxLength": 40},
+    "idempotency_key": {
+        "type": "string",
+        "minLength": 32,
+        "maxLength": 128,
+        "pattern": r"^[A-Za-z0-9_-]{32,128}$",
+    },
+}
+_START_PROPERTIES = {
+    "dialog_capability": _DIALOG_CAPABILITY,
+    "action": {"type": "string", "pattern": r"^(login|register)$"},
+    "project_name": {
+        "anyOf": [{"type": "string", "maxLength": 150}, {"type": "null"}],
+        "default": None,
+    },
+    "consent": {"type": "boolean"},
+}
+_SCHEMA_ANNOTATIONS = {"title", "description", "examples", "$comment"}
 UI_MARKERS = (
     "io.modelcontextprotocol/ui",
     "resourceUri",
@@ -26,6 +51,86 @@ UI_MARKERS = (
     "ui/resource",
     "ui://",
 )
+
+
+def _schema_contract(value: Any) -> Any:
+    """Ignore documentation, retaining every validation/default keyword.
+
+    This is a conservative compatibility comparison, not a general JSON Schema
+    validator. A changed native constraint requires an explicit package review.
+    """
+    if isinstance(value, dict):
+        return {
+            key: _schema_contract(item)
+            for key, item in value.items()
+            if key not in _SCHEMA_ANNOTATIONS
+        }
+    if isinstance(value, list):
+        return [_schema_contract(item) for item in value]
+    return value
+
+
+def _inspect_input_schema(tool: dict[str, Any], errors: list[str]) -> None:
+    name = tool["name"]
+    schema = tool.get("inputSchema")
+    if not isinstance(schema, dict) or schema.get("type") != "object":
+        errors.append(f"{name} requires an object inputSchema")
+        return
+    properties = schema.get("properties")
+    required = schema.get("required", [])
+    if (
+        not isinstance(properties, dict)
+        or not isinstance(required, list)
+        or any(not isinstance(item, str) for item in required)
+    ):
+        errors.append(f"{name} has malformed properties/required inputSchema")
+        return
+    if schema.get("additionalProperties") is not False:
+        errors.append(f"{name} inputSchema must reject additional properties")
+    if len(required) != len(set(required)) or not set(required) <= properties.keys():
+        errors.append(f"{name} has invalid required input fields")
+    allowed_keys = {
+        "type",
+        "properties",
+        "required",
+        "additionalProperties",
+        "$defs",
+        "$schema",
+    }
+    if set(schema) - allowed_keys - _SCHEMA_ANNOTATIONS:
+        errors.append(f"{name} inputSchema has unreviewed object constraints")
+    if name not in NATIVE_DIALOG_TOOLS:
+        if (
+            "session_capability" not in required
+            or _schema_contract(properties.get("session_capability"))
+            != _SESSION_CAPABILITY
+        ):
+            errors.append(
+                f"{name} business input requires a bounded session_capability"
+            )
+        return
+
+    if name == "erp_dialog_check":
+        expected = _CHECK_PROPERTIES
+        expected_required = set(expected)
+    elif name == "erp_dialog_start":
+        expected = _START_PROPERTIES
+        expected_required = {"dialog_capability", "action", "consent"}
+    elif name in {"erp_dialog_me", "erp_dialog_logout"}:
+        expected = {"session_capability": _SESSION_CAPABILITY}
+        expected_required = set(expected)
+    else:
+        expected = {"dialog_capability": _DIALOG_CAPABILITY}
+        expected_required = set(expected)
+    if set(required) != expected_required:
+        errors.append(
+            f"{name} required fields differ from the native callback contract"
+        )
+    for field, expected_schema in expected.items():
+        if _schema_contract(properties.get(field)) != expected_schema:
+            errors.append(
+                f"{name} field {field} differs from the native input contract"
+            )
 
 
 @dataclass(frozen=True)
@@ -81,12 +186,25 @@ def inspect_contract(
     if not isinstance(server_info, dict):
         errors.append("initialize is missing serverInfo")
         server_info = {}
+    if server_info.get("name") != SERVER_NAME:
+        errors.append(f"initialize server identity must be {SERVER_NAME!r}")
+    if (
+        not isinstance(server_info.get("version"), str)
+        or not server_info["version"].strip()
+    ):
+        errors.append("initialize is missing a nonempty server version")
     if not isinstance(capabilities, dict):
         errors.append("initialize is missing capabilities")
         capabilities = {}
+    if not isinstance(capabilities.get("tools"), dict):
+        errors.append("initialize is missing the tools capability")
     if not isinstance(protocol_version, str) or not protocol_version:
         errors.append("initialize is missing protocolVersion")
         protocol_version = "unknown"
+    if protocol_version != PROTOCOL_VERSION:
+        errors.append(
+            f"unsupported protocol version {protocol_version!r}; expected {PROTOCOL_VERSION}"
+        )
 
     tools_result: dict[str, Any]
     try:
@@ -107,6 +225,21 @@ def inspect_contract(
     for required in NATIVE_DIALOG_TOOLS:
         if required not in tool_names:
             errors.append(f"tools/list is missing {required}")
+    seen: set[str] = set()
+    for tool in tools:
+        if not isinstance(tool, dict) or not isinstance(tool.get("name"), str):
+            errors.append("tools/list contains a malformed tool definition")
+            continue
+        if tool["name"] in seen:
+            errors.append(f"tools/list contains duplicate tool {tool['name']}")
+        seen.add(tool["name"])
+        _inspect_input_schema(tool, errors)
+    if not tool_names - set(NATIVE_DIALOG_TOOLS):
+        errors.append("tools/list contains no protected business tools")
+    if tools_result.get("nextCursor"):
+        errors.append(
+            "tools/list pagination is incomplete; inspect remaining catalog pages"
+        )
 
     for marker in UI_MARKERS:
         if _contains_marker(initialize, marker) or _contains_marker(tools_list, marker):
@@ -117,6 +250,10 @@ def inspect_contract(
     except ValueError as exc:
         errors.append(str(exc))
         resources_result = {}
+    if resources_result.get("nextCursor"):
+        errors.append(
+            "resources/list pagination is incomplete; inspect remaining catalog pages"
+        )
     resources = resources_result.get("resources", [])
     if not isinstance(resources, list):
         errors.append("resources/list did not return a resources array")
@@ -171,6 +308,7 @@ def post_json(
         headers={
             "Accept": "application/json, text/event-stream",
             "Content-Type": "application/json",
+            "MCP-Protocol-Version": PROTOCOL_VERSION,
         },
         method="POST",
     )
@@ -197,7 +335,7 @@ def run_live_check(url: str, timeout: float) -> ContractReport:
             "id": 1,
             "method": "initialize",
             "params": {
-                "protocolVersion": "2025-06-18",
+                "protocolVersion": PROTOCOL_VERSION,
                 "capabilities": {},
                 "clientInfo": {"name": "gigma-mcp-live-check", "version": "1"},
             },
@@ -213,7 +351,9 @@ def run_live_check(url: str, timeout: float) -> ContractReport:
         timeout,
     )
     if notification_status not in (200, 202):
-        raise RuntimeError(f"notifications/initialized returned HTTP {notification_status}")
+        raise RuntimeError(
+            f"notifications/initialized returned HTTP {notification_status}"
+        )
 
     tools_status, tools_list = post_json(
         url,
