@@ -37,7 +37,9 @@ For the complete first-run procedure, read
 
 ## Native owner connection
 
-The package uses one callback choice path at a time:
+An authenticated session can be reused when the discovered check schema supports
+it. When a new login is needed and a check prepares a callback, the package uses
+one callback choice path at a time:
 
 `erp_dialog_check` → explicit text login/registration choice →
 `erp_dialog_start` → callback call → `erp_dialog_status` →

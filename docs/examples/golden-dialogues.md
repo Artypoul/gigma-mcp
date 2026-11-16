@@ -7,8 +7,10 @@ capabilities, tokens, callback proofs, phone numbers or provider secrets.
 
 User: `Подключи меня к Gigma.`
 
-Agent: asks for the phone, calls the check tool, presents the project result,
-and asks the user to choose login or registration.
+Agent: asks for the phone if needed and calls the check tool. If a supported
+check confirms an existing session, the agent continues it without another
+login or registration choice. For a prepared dialog, the agent presents the
+project result and asks the user to choose login or registration.
 
 After the callback is verified, the agent reads the owner summary and offers
 applications, subscriptions, payment review, investigation and logout.
@@ -22,7 +24,15 @@ registration. It never infers consent from `project_exists`.
 
 The agent says that the callback is waiting and does not start another callback.
 It polls with bounded progress and waits for the user to call from the same
-phone.
+phone. If an exact check replay follows a start that was sent or may have been
+sent, the agent checks the original stored dialog capability's status before any
+consent decision, or uses bounded recovery if it is unavailable. A different
+returned capability does not settle the original or justify a new start. An
+`awaiting_choice` status after an unknown start does not prove the provider
+was not called; the agent uses bounded recovery and does not start again or ask
+for fresh consent automatically. Prior consent remains valid for the same
+decision. A pending callback for another identity does not connect the new
+target.
 
 ## Unknown callback outcome
 

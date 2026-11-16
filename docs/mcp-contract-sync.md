@@ -56,7 +56,8 @@ conservative package compatibility check, not a general JSON Schema validator.
 Additional protected business tools are allowed. The reported version is
 recorded, not pinned to the MCP SDK version or treated as a deployment SHA.
 
-The package supports exactly one textual choice after `erp_dialog_check`.
+For a prepared dialog, the package supports exactly one textual choice after
+`erp_dialog_check`; an authenticated session result needs no new choice.
 If this text-only check finds UI metadata, the active client
 is using a different backend revision, stale metadata or another registration;
 stop and clean up the client before continuing.

@@ -80,7 +80,9 @@ After installation, open a new agent chat and write:
 Connect me to Gigma
 ```
 
-The agent will:
+If a valid session is already available and the server supports checking it,
+the agent continues that session without another login or registration choice.
+For a new callback connection, the agent will:
 
 1. ask for the owner phone without asking for a token or password;
 2. check whether a project exists;
