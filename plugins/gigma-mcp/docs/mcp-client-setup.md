@@ -60,8 +60,15 @@ Start a new agent chat and write:
 Connect me to Gigma
 ```
 
-The agent asks for the owner phone. Do not paste a token, password, callback
-proof, or capability.
+The agent asks for the owner phone only if it is not already known. Do not paste
+a token, password, callback proof, or capability.
+
+When an existing session capability is in MCP tool state and the discovered
+check schema supports it, the agent includes it in a new check. An authenticated
+result continues that session without a login/register question. If the schema
+does not support it, the agent uses the legacy phone/key check below. On
+`not_authorized` or `operation_unavailable`, it stops without retrying the check
+without the capability or starting a callback.
 
 The expected sequence is:
 
@@ -75,11 +82,22 @@ erp_dialog_check
 → erp_dialog_me
 ```
 
-After `erp_dialog_check`, ask the login/register question once and call
-`erp_dialog_start` only after explicit textual consent. Registration asks for
+For a newly prepared result with no prior start, ask the login/register question
+once and call `erp_dialog_start` only after explicit textual consent. Registration asks for
 a project name. Login does not. A host approval for the project check is not
 the login/register choice. If a choice card appears, stop, report the metadata
 mismatch and clean up the client registration before another attempt.
+
+For an exact check retry, retain the same key and arguments. While a callback is
+pending, normally check the same callback's status instead of starting another.
+If an exact replay follows a start that was sent or may have been sent, check
+the original stored dialog capability's status before a consent decision; if
+it is unavailable, use bounded recovery. A different returned capability does
+not settle the original attempt or justify a new start. When start's outcome is unknown,
+`awaiting_choice` does not prove the provider was not called: use bounded
+recovery without an automatic start or fresh consent. Preserve earlier consent
+for an unchanged decision. A pending callback for a different identity does not
+connect the new target.
 
 The callback state spans multiple chat messages. The agent keeps opaque state
 inside MCP tool state. If the host loses that state, the agent must not ask for

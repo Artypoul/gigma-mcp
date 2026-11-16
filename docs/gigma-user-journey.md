@@ -3,7 +3,7 @@
 This is the human-facing flow. Tool names are implementation details; the agent
 should speak in goals and safe states.
 
-## State machine
+## New callback path
 
 ```text
 not_installed
@@ -15,6 +15,8 @@ not_installed
   → operating
   → logged_out
 ```
+
+An authenticated existing session can instead continue directly to `operating`.
 
 Terminal states are `expired`, `cancelled`, `provider_outcome_unknown` and
 `recovery_required`. They require the action described in the troubleshooting
@@ -37,7 +39,9 @@ guide.
 
 Registration additionally asks for a project name.
 
-The choice step uses explicit textual consent once, then the agent calls
+If a supported check confirms an existing session, continue it without this
+choice or a new callback. For a newly prepared dialog with no prior start, the
+choice step uses explicit textual consent once, then the agent calls
 `erp_dialog_start`. A host approval for checking the project does not replace
 this choice. A UI choice card indicates stale or incompatible metadata:
 stop and clean up the client registration before another attempt.
