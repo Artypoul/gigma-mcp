@@ -5,14 +5,20 @@ from __future__ import annotations
 
 import argparse
 import json
-from dataclasses import dataclass
+import re
+import socket
+import ssl
+import time
+from dataclasses import dataclass, field
+from http.client import HTTPException
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 DEFAULT_URL = "https://api.auth.gigma.ru/mcp/owner/"
 SERVER_NAME = "Gigma Auth: MCP Owner"
 PROTOCOL_VERSION = "2025-06-18"
+MAX_RESPONSE_BYTES = 8 * 1024 * 1024
 NATIVE_DIALOG_TOOLS = (
     "erp_dialog_check",
     "erp_dialog_start",
@@ -148,8 +154,17 @@ class ContractReport:
 
 
 def _json_result(payload: dict[str, Any], method: str) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        raise ValueError(f"{method} response is not a JSON object")
     if "error" in payload:
-        raise ValueError(f"{method} returned JSON-RPC error: {payload['error']}")
+        error = payload["error"]
+        if not isinstance(error, dict):
+            raise ValueError(f"{method} returned a malformed JSON-RPC error")
+        # Do not echo error.data: it may contain credentials or session details.
+        raise ValueError(
+            f"{method} returned JSON-RPC error {error.get('code')}: "
+            f"{str(error.get('message', 'unknown error'))[:240]}"
+        )
     result = payload.get("result")
     if not isinstance(result, dict):
         raise ValueError(f"{method} did not return a result object")
@@ -170,7 +185,7 @@ def _contains_marker(value: Any, marker: str) -> bool:
 def inspect_contract(
     initialize: dict[str, Any],
     tools_list: dict[str, Any],
-    resources_list: dict[str, Any],
+    resources_list: dict[str, Any] | None = None,
 ) -> ContractReport:
     errors: list[str] = []
     warnings: list[str] = []
@@ -198,6 +213,8 @@ def inspect_contract(
         capabilities = {}
     if not isinstance(capabilities.get("tools"), dict):
         errors.append("initialize is missing the tools capability")
+    if "resources" in capabilities and not isinstance(capabilities["resources"], dict):
+        errors.append("initialize has a malformed resources capability")
     if not isinstance(protocol_version, str) or not protocol_version:
         errors.append("initialize is missing protocolVersion")
         protocol_version = "unknown"
@@ -212,7 +229,7 @@ def inspect_contract(
     except ValueError as exc:
         errors.append(str(exc))
         tools_result = {}
-    tools = tools_result.get("tools", [])
+    tools = tools_result.get("tools")
     if not isinstance(tools, list):
         errors.append("tools/list did not return a tools array")
         tools = []
@@ -245,16 +262,21 @@ def inspect_contract(
         if _contains_marker(initialize, marker) or _contains_marker(tools_list, marker):
             errors.append(f"text-only contract exposes UI metadata: {marker}")
 
-    try:
-        resources_result = _json_result(resources_list, "resources/list")
-    except ValueError as exc:
-        errors.append(str(exc))
-        resources_result = {}
+    resources_result: dict[str, Any] = {"resources": []}
+    if resources_list is None:
+        if isinstance(capabilities.get("resources"), dict):
+            errors.append("resources capability advertised but resources/list was not inspected")
+    else:
+        try:
+            resources_result = _json_result(resources_list, "resources/list")
+        except ValueError as exc:
+            errors.append(str(exc))
+            resources_result = {}
     if resources_result.get("nextCursor"):
         errors.append(
             "resources/list pagination is incomplete; inspect remaining catalog pages"
         )
-    resources = resources_result.get("resources", [])
+    resources = resources_result.get("resources")
     if not isinstance(resources, list):
         errors.append("resources/list did not return a resources array")
         resources = []
@@ -298,36 +320,221 @@ def inspect_contract(
     )
 
 
-def post_json(
-    url: str, payload: dict[str, Any], timeout: float
-) -> tuple[int, dict[str, Any]]:
-    data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-    request = Request(
-        url,
-        data=data,
-        headers={
-            "Accept": "application/json, text/event-stream",
-            "Content-Type": "application/json",
-            "MCP-Protocol-Version": PROTOCOL_VERSION,
-        },
-        method="POST",
-    )
+class LiveCheckError(RuntimeError):
+    """A classified probe failure; network/access failures are not contract verdicts."""
+
+    def __init__(self, category: str, message: str):
+        super().__init__(message)
+        self.category = category
+
+
+@dataclass
+class _TransportSession:
+    session_id: str | None = field(default=None, repr=False)
+
+
+class _NoRedirects(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        # Never rewrite a POST as GET or forward a transport session to a login
+        # page/another origin. The caller must supply the canonical MCP URL.
+        return None
+
+
+def _rpc_result(payload: Any, method: str, request_id: int) -> dict[str, Any]:
+    """Validate wire envelopes separately from result-only contract fixtures."""
+    if not isinstance(payload, dict) or payload.get("jsonrpc") != "2.0":
+        raise LiveCheckError("protocol", f"{method} returned an invalid JSON-RPC 2.0 envelope")
+    if type(payload.get("id")) is not type(request_id) or payload["id"] != request_id:
+        raise LiveCheckError("protocol", f"{method} response id does not match its request")
+    if "method" in payload or (("result" in payload) == ("error" in payload)):
+        raise LiveCheckError("protocol", f"{method} response must contain exactly one of result/error")
+    if "error" in payload:
+        error = payload["error"]
+        if (
+            not isinstance(error, dict)
+            or type(error.get("code")) is not int
+            or not isinstance(error.get("message"), str)
+        ):
+            raise LiveCheckError("protocol", f"{method} returned a malformed JSON-RPC error")
     try:
-        with urlopen(request, timeout=timeout) as response:
-            body = response.read()
-            if not body:
+        return _json_result(payload, method)
+    except ValueError as exc:
+        raise LiveCheckError("rpc" if "error" in payload else "protocol", str(exc)) from exc
+
+
+def _decode_json(body: bytes | str, method: str) -> Any:
+    try:
+        if isinstance(body, bytes):
+            body = body.decode("utf-8")
+        return json.loads(body)
+    except (UnicodeError, ValueError) as exc:
+        raise LiveCheckError("protocol", f"{method} returned invalid UTF-8 JSON") from exc
+
+
+def _response_chunks(response, deadline: float, method: str):
+    size = 0
+    while True:
+        if time.monotonic() >= deadline:
+            raise LiveCheckError("timeout", f"{method} exceeded the response deadline")
+        # read1 returns available data, so SSE does not wait for connection close
+        # and a stream of heartbeats cannot indefinitely extend the deadline.
+        chunk = response.read1(65536)
+        if time.monotonic() >= deadline:
+            raise LiveCheckError("timeout", f"{method} exceeded the response deadline")
+        if not chunk:
+            if response.length not in (None, 0):
+                raise LiveCheckError("network", f"{method} HTTP response body was truncated")
+            return
+        size += len(chunk)
+        if size > MAX_RESPONSE_BYTES:
+            raise LiveCheckError("probe_limit", f"{method} exceeded the response size limit")
+        yield chunk
+
+
+def _sse_lines(response, deadline: float, method: str):
+    pending = b""
+    skip_lf = False
+    first_line = True
+    for chunk in _response_chunks(response, deadline, method):
+        if skip_lf and chunk.startswith(b"\n"):
+            chunk = chunk[1:]
+        skip_lf = False
+        pending += chunk
+        while match := re.search(br"[\r\n]", pending):
+            line, ending = pending[: match.start()], pending[match.start()]
+            pending = pending[match.end() :]
+            if ending == 13:
+                if pending.startswith(b"\n"):
+                    pending = pending[1:]
+                elif not pending:
+                    skip_lf = True
+            try:
+                decoded = line.decode("utf-8")
+            except UnicodeError as exc:
+                raise LiveCheckError("protocol", f"{method} returned invalid UTF-8 SSE") from exc
+            if first_line:
+                decoded = decoded.removeprefix("\ufeff")
+                first_line = False
+            yield decoded
+    # SSE dispatches an event only at a blank line, never an unfinished EOF frame.
+
+
+def _read_sse(response, deadline: float, method: str, request_id: int) -> dict[str, Any]:
+    data: list[str] = []
+    event = "message"
+    for line in _sse_lines(response, deadline, method):
+        if line:
+            key, separator, value = line.partition(":")
+            if separator and value.startswith(" "):
+                value = value[1:]
+            if key == "data":
+                data.append(value)
+            elif key == "event":
+                event = value or "message"
+            continue
+        if data and event == "message":
+            message = _decode_json("\n".join(data), method)
+            if not isinstance(message, dict) or message.get("jsonrpc") != "2.0":
+                raise LiveCheckError("protocol", f"{method} returned an invalid SSE JSON-RPC envelope")
+            if "method" in message:
+                if (
+                    not isinstance(message["method"], str)
+                    or "result" in message
+                    or "error" in message
+                    or ("params" in message and not isinstance(message["params"], dict))
+                ):
+                    raise LiveCheckError("protocol", f"{method} returned a malformed SSE notification/request")
+                if "id" in message:
+                    raise LiveCheckError(
+                        "probe_limit", "server-initiated requests are not executed by this metadata probe"
+                    )
+                # Notifications can legitimately precede the correlated response.
+            else:
+                _rpc_result(message, method, request_id)
+                return message
+        data, event = [], "message"
+    raise LiveCheckError("protocol", f"{method} SSE stream ended without a correlated JSON-RPC response")
+
+
+def _network_failure(exc: BaseException, method: str) -> LiveCheckError:
+    reason = exc.reason if isinstance(exc, URLError) else exc
+    if isinstance(reason, TimeoutError):
+        category = "timeout"
+    elif isinstance(reason, ssl.SSLError):
+        category = "tls"
+    elif isinstance(reason, socket.gaierror):
+        category = "dns"
+    else:
+        category = "network"
+    return LiveCheckError(category, f"{method} transport failed ({type(reason).__name__})")
+
+
+def post_json(
+    url: str,
+    payload: dict[str, Any],
+    timeout: float,
+    *,
+    session: _TransportSession | None = None,
+) -> tuple[int, dict[str, Any]]:
+    """Post one MCP message, accepting JSON or SSE without auth/redirect fallback."""
+    method = payload["method"]
+    headers = {
+        "Accept": "application/json, text/event-stream",
+        "Content-Type": "application/json",
+    }
+    if method != "initialize":
+        headers["MCP-Protocol-Version"] = PROTOCOL_VERSION
+        if session is not None and session.session_id is not None:
+            headers["Mcp-Session-Id"] = session.session_id
+    data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    request = Request(url, data=data, headers=headers, method="POST")
+    deadline = time.monotonic() + timeout
+    try:
+        with build_opener(_NoRedirects()).open(request, timeout=timeout) as response:
+            if "id" not in payload:
+                if response.status != 202 or response.read(1):
+                    raise LiveCheckError(
+                        "protocol", f"{method} must return HTTP 202 with no response body"
+                    )
                 return response.status, {}
-            parsed = json.loads(body.decode("utf-8"))
-            if not isinstance(parsed, dict):
-                raise ValueError("MCP response is not a JSON object")
+            content_type = response.headers.get_content_type()
+            if content_type == "text/event-stream":
+                parsed = _read_sse(response, deadline, method, payload["id"])
+            elif content_type == "application/json":
+                parsed = _decode_json(b"".join(_response_chunks(response, deadline, method)), method)
+            else:
+                raise LiveCheckError("protocol", f"{method} returned unsupported Content-Type {content_type!r}")
+            _rpc_result(parsed, method, payload["id"])
+            if method == "initialize" and session is not None:
+                session_ids = response.headers.get_all("Mcp-Session-Id", [])
+                if session_ids:
+                    if (
+                        len(session_ids) != 1
+                        or not session_ids[0]
+                        or any(not 0x21 <= ord(char) <= 0x7E for char in session_ids[0])
+                    ):
+                        raise LiveCheckError("protocol", "initialize returned an invalid Mcp-Session-Id header")
+                    session.session_id = session_ids[0]
             return response.status, parsed
     except HTTPError as exc:
-        raise RuntimeError(f"HTTP {exc.code} from {url}") from exc
-    except URLError as exc:
-        raise RuntimeError(f"network error for {url}: {exc.reason}") from exc
+        if 300 <= exc.code < 400:
+            category, detail = "redirect", "redirect refused; use the canonical MCP URL"
+        elif exc.code in (401, 403):
+            category, detail = "http_auth", "anonymous metadata discovery denied; no authentication attempted"
+        elif exc.code == 404 and session is not None and session.session_id:
+            category, detail = "session", "transport session no longer available; rerun discovery"
+        else:
+            category, detail = "http", "metadata discovery unavailable"
+        exc.close()
+        raise LiveCheckError(category, f"{method}: HTTP {exc.code}; {detail}") from exc
+    except (URLError, OSError, HTTPException) as exc:
+        raise _network_failure(exc, method) from exc
 
 
 def run_live_check(url: str, timeout: float) -> ContractReport:
+    if timeout <= 0:
+        raise ValueError("timeout must be greater than zero")
+    session = _TransportSession()
     initialize_status, initialize = post_json(
         url,
         {
@@ -341,35 +548,51 @@ def run_live_check(url: str, timeout: float) -> ContractReport:
             },
         },
         timeout,
+        session=session,
     )
-    if initialize_status != 200:
-        raise RuntimeError(f"initialize returned HTTP {initialize_status}")
+    if not 200 <= initialize_status < 300:
+        raise LiveCheckError("http", f"initialize returned HTTP {initialize_status}")
+    initialize_result = _rpc_result(initialize, "initialize", 1)
+    if initialize_result.get("protocolVersion") != PROTOCOL_VERSION:
+        raise LiveCheckError("protocol", f"initialize did not negotiate supported version {PROTOCOL_VERSION}")
+    capabilities = initialize_result.get("capabilities")
+    if not isinstance(capabilities, dict) or not isinstance(capabilities.get("tools"), dict):
+        raise LiveCheckError("protocol", "initialize did not advertise the required tools capability")
+    if "resources" in capabilities and not isinstance(capabilities["resources"], dict):
+        raise LiveCheckError("protocol", "initialize returned a malformed resources capability")
 
-    notification_status, _ = post_json(
+    notification_status, notification = post_json(
         url,
         {"jsonrpc": "2.0", "method": "notifications/initialized"},
         timeout,
+        session=session,
     )
-    if notification_status not in (200, 202):
-        raise RuntimeError(
-            f"notifications/initialized returned HTTP {notification_status}"
+    if notification_status != 202 or notification:
+        raise LiveCheckError(
+            "protocol", "notifications/initialized must return HTTP 202 with no response body"
         )
 
     tools_status, tools_list = post_json(
         url,
         {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
         timeout,
+        session=session,
     )
-    if tools_status != 200:
-        raise RuntimeError(f"tools/list returned HTTP {tools_status}")
+    if not 200 <= tools_status < 300:
+        raise LiveCheckError("http", f"tools/list returned HTTP {tools_status}")
+    _rpc_result(tools_list, "tools/list", 2)
 
-    resources_status, resources_list = post_json(
-        url,
-        {"jsonrpc": "2.0", "id": 3, "method": "resources/list", "params": {}},
-        timeout,
-    )
-    if resources_status != 200:
-        raise RuntimeError(f"resources/list returned HTTP {resources_status}")
+    resources_list = None
+    if "resources" in capabilities:
+        resources_status, resources_list = post_json(
+            url,
+            {"jsonrpc": "2.0", "id": 3, "method": "resources/list", "params": {}},
+            timeout,
+            session=session,
+        )
+        if not 200 <= resources_status < 300:
+            raise LiveCheckError("http", f"resources/list returned HTTP {resources_status}")
+        _rpc_result(resources_list, "resources/list", 3)
 
     return inspect_contract(initialize, tools_list, resources_list)
 
@@ -382,6 +605,10 @@ def main() -> int:
 
     try:
         report = run_live_check(args.url, args.timeout)
+    except LiveCheckError as exc:
+        status = "failed" if exc.category in {"protocol", "rpc"} else "unavailable"
+        print(f"Live contract check {status} [{exc.category}]: {exc}")
+        return 1
     except (RuntimeError, ValueError) as exc:
         print(f"Live contract check failed: {exc}")
         return 1

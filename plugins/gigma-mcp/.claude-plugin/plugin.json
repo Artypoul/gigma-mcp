@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin.json",
   "name": "gigma-mcp",
   "displayName": "Gigma MCP",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "Connect Claude Code to the Gigma owner MCP through native callback onboarding.",
   "author": {
     "name": "Gigma",
@@ -11,7 +11,12 @@
   "homepage": "https://api.auth.gigma.ru",
   "repository": "https://github.com/Artypoul/gigma-mcp",
   "license": "MIT",
-  "keywords": ["gigma", "mcp", "authentication", "callback"],
+  "keywords": [
+    "gigma",
+    "mcp",
+    "authentication",
+    "callback"
+  ],
   "skills": "./skills/",
   "mcpServers": {
     "gigma": {

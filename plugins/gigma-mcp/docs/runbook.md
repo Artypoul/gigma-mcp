@@ -68,12 +68,21 @@ From this distribution checkout:
 ```powershell
 python -B validate_plugin.py
 python -B -m unittest discover -s tests -v
+python -B build_chatgpt_package.py
 python -B check_live_contract.py
 ```
 
 The live check uses only public MCP initialization and metadata discovery. It
 does not authorize or execute callback, business or payment operations. A pass
 proves metadata compatibility, not delivery, database recovery or deployment.
+
+These distribution-only checks need Python 3.10+ and its standard library; they
+can also run in an isolated Linux checkout without the Windows backend stack.
+The ChatGPT builder writes a portable single-plugin ZIP under `dist/`, including
+the package's license, skills, canonical documentation and metadata probe.
+Use the [ChatGPT guide](chatgpt-setup.md) for installation and host verification.
+Keep package validation, public metadata discovery and an authenticated owner
+session as separate pieces of evidence.
 
 ## Release verification
 

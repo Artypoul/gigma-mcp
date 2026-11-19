@@ -6,6 +6,17 @@ OAuth/PKCE mode for confidential clients.
 
 ## Install
 
+### ChatGPT web
+
+Follow [the ChatGPT setup guide](chatgpt-setup.md). Install the portable private
+plugin or add the existing HTTPS MCP endpoint using ChatGPT's custom-server
+flow. Select transport authentication **None** for this native callback
+contract. The owner still authenticates through the callback tools.
+
+Codex marketplace commands do not configure ChatGPT web. Check the actual
+discovered tools in the ChatGPT conversation before beginning callback login;
+the presence of a skill or plugin card alone is not sufficient.
+
 ### Codex
 
 ```text
