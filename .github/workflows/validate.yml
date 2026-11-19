@@ -1,4 +1,4 @@
-name: Validate ChatGPT plugin
+name: Validate Gigma marketplace
 
 on:
   push:
@@ -32,7 +32,12 @@ jobs:
         run: python build_chatgpt_package.py
       - name: Install pinned Codex client
         run: npm install --prefix "$RUNNER_TEMP/gigma-codex" --no-audit --no-fund @openai/codex@0.170.0
-      - name: Verify MCP registration with the real client
+      - name: Verify the repository marketplace with the real client
+        run: |
+          python check_client_registration.py \
+            --codex "$RUNNER_TEMP/gigma-codex/node_modules/.bin/codex" \
+            --marketplace-root .
+      - name: Verify the portable archive and former MCP regression
         run: |
           python check_client_registration.py \
             --codex "$RUNNER_TEMP/gigma-codex/node_modules/.bin/codex" \
@@ -44,3 +49,30 @@ jobs:
           name: gigma-mcp-chatgpt
           path: dist/gigma-mcp-*-chatgpt.zip
           if-no-files-found: error
+
+  install-from-github:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      # A PR's synthetic merge SHA is not guaranteed to exist in a normal clone.
+      # Clone the actual head repository at its published commit instead.
+      GIGMA_MARKETPLACE_URL: ${{ github.event.pull_request.head.repo.clone_url || format('{0}/{1}.git', github.server_url, github.repository) }}
+      GIGMA_MARKETPLACE_REF: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Check out validation scripts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Install pinned Codex client
+        run: npm install --prefix "$RUNNER_TEMP/gigma-codex" --no-audit --no-fund @openai/codex@0.170.0
+      - name: Install and verify the published GitHub marketplace
+        run: |
+          python check_marketplace_install.py \
+            --ci-only \
+            --codex "$RUNNER_TEMP/gigma-codex/node_modules/.bin/codex" \
+            --source "$GIGMA_MARKETPLACE_URL" \
+            --ref "$GIGMA_MARKETPLACE_REF"

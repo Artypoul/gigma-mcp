@@ -1,4 +1,4 @@
-# Gigma MCP
+# Gigma MCP marketplace
 
 Public distribution repository for the Gigma owner MCP plugin for ChatGPT,
 Codex, Claude Code, and Cursor. The package contains client manifests, the native callback
@@ -23,113 +23,128 @@ Read [the client setup guide](docs/mcp-client-setup.md) before installation.
 Read [the project workflows](docs/gigma-project-workflows.md) to understand
 what the agent can do after connection.
 
-## Install
+## Install from the GitHub marketplace
+
+- Repository: **https://github.com/Artypoul/gigma-mcp**
+- Marketplace: **`gigma-mcp`**
+- Plugin selector: **`gigma-mcp@gigma-mcp`**
+
+The repository publishes one plugin from `plugins/gigma-mcp`. Its marketplace
+entries include the six workflow skills and the existing `gigma` MCP connection.
+Use the repository URL when adding a marketplace; the server URL is already
+in the plugin configuration.
+
+| Client | Marketplace catalog in this repository |
+| --- | --- |
+| ChatGPT GitHub import / Codex | `.agents/plugins/marketplace.json` |
+| Claude Code | `.claude-plugin/marketplace.json` |
+| Cursor | `.cursor-plugin/marketplace.json` |
 
 ### ChatGPT
 
-Use the [ChatGPT setup guide (Russian)](docs/chatgpt-setup.md). A Codex
-marketplace installation does not register the server in ChatGPT web.
+In a workspace with marketplace imports enabled, an admin opens **Admin →
+Plugins → Add → Import marketplace** and enters
+`https://github.com/Artypoul/gigma-mcp`. Leave Path empty and use the default
+branch or `main`. Review the **Gigma MCP** import result, then configure its
+installation policy. The [ChatGPT setup guide (Russian)](docs/chatgpt-setup.md)
+describes this workspace-admin flow and **Sync now** updates. Availability in
+personal accounts can differ. A ZIP import is a separate snapshot.
 
-The ChatGPT connection uses the existing HTTPS endpoint
-`https://api.auth.gigma.ru/mcp/owner/`, Streamable HTTP, and transport
-authentication **None**. Owner authentication still happens through the
-native callback tools; transport discovery does not grant workspace access.
+ChatGPT can mark imported plugins that declare MCP servers **Desktop only**,
+including plugins whose MCP URL uses HTTPS. Check the imported plugin's
+availability in the intended client. The repository declares the connection;
+web tool availability is controlled by ChatGPT's import/runtime support.
+See [OpenAI's plugin management documentation](https://learn.chatgpt.com/docs/enterprise/plugin-management).
 
-To build the complete private plugin, including its six workflow skills:
-
-```text
-python build_chatgpt_package.py
-```
-
-The builder validates the package and writes
-`dist/gigma-mcp-<version>-chatgpt.zip`. Install this single-plugin archive
-through Plugin Creator. The package declares one `gigma` MCP connection in
-`mcp.json`, so a compatible client registers it with the six skills when the
-plugin is installed and enabled. Complete any connection steps shown by the
-host; no separately added MCP server is needed. Update an existing Gigma plugin
-instead of creating a duplicate. The custom-server flow in the ChatGPT guide
-is an alternative for using the endpoint without the complete plugin.
-
-Installation and successful discovery must be checked separately. Verify the
-actual `erp_dialog_*` tools in the selected ChatGPT conversation before asking
-for a phone or beginning owner login.
-
-### Codex, Claude Code and Cursor
-
-Codex:
+### Codex
 
 ```text
-codex plugin marketplace add https://github.com/Artypoul/gigma-mcp.git
+codex plugin marketplace add Artypoul/gigma-mcp --ref main
 codex plugin add gigma-mcp@gigma-mcp
 ```
 
-The plugin supplies the `gigma` server configuration automatically; there is no
-`codex mcp add` step. Keep exactly one `gigma` registration in the active client.
-After removing an old manual entry or updating the plugin, close old Gigma chats
-and restart the client. Check the plugin's MCP connection and the available
-`erp_dialog_*` tools. Separately verify the deployed text-only contract with:
+To refresh an existing Git marketplace and install its current plugin version:
+
+```text
+codex plugin marketplace upgrade gigma-mcp
+codex plugin add gigma-mcp@gigma-mcp
+```
+
+The plugin supplies the `gigma` server configuration automatically. Keep
+exactly one `gigma` registration in the active client. If an old manually added
+`gigma` entry is confirmed, remove that duplicate before enabling the plugin.
+After an update, start a new conversation and verify that `erp_dialog_*` tools
+are available. Adding the repository to Codex configures Codex; ChatGPT has its
+own import and installation.
+
+### Claude Code and Cursor
+
+Claude Code:
+
+```text
+claude plugin marketplace add Artypoul/gigma-mcp
+claude plugin install gigma-mcp@gigma-mcp
+```
+
+Cursor can install the `gigma-mcp` entry from this repository's marketplace.
+Read [the client setup guide](docs/mcp-client-setup.md) for the connection check.
+
+### Verify the repository marketplace
+
+From a repository checkout, with Codex installed:
+
+```text
+python validate_plugin.py
+python check_client_registration.py --marketplace-root .
+```
+
+The second command reads the actual checked-in marketplace catalog through the
+real Codex loader. It stages the catalog unchanged with its declared plugin
+source, then verifies one `gigma` MCP server and all six skills. It rejects
+missing or invalid source paths and component-loading errors. It does not
+install the plugin, start an agent turn, call Gigma tools or perform owner login.
+
+The CI workflow checks the repository marketplace and the separately built
+portable ZIP with pinned Codex 0.170.0. A separate disposable CI job clones the
+published GitHub commit through `codex plugin marketplace add`, installs
+`gigma-mcp@gigma-mcp`, and verifies the installed version, enabled state, source,
+MCP declaration and six skills with the real client. This installation probe
+refuses to run against an existing Codex configuration or outside GitHub CI.
+A loader startup failure fails the check; it does not count as successful
+registration. Live endpoint discovery is a separate, read-only check:
 
 ```text
 python check_live_contract.py
 ```
 
-Claude Code:
+### Optional portable ZIP
+
+For a client that imports a single-plugin archive:
 
 ```text
-claude plugin marketplace add https://github.com/Artypoul/gigma-mcp.git
-claude plugin install gigma-mcp@gigma-mcp
+python build_chatgpt_package.py
 ```
 
-Cursor can install `gigma-mcp` from the repository marketplace. The package
-also includes a manual `mcp.json` for clients that support direct MCP setup.
+This writes `dist/gigma-mcp-<version>-chatgpt.zip`. It contains the plugin, its
+six skills and its MCP declaration. It does not contain the repository's
+marketplace catalogs or establish GitHub updates. Use the marketplace route
+above when installing from this repository.
 
-If `codex mcp list` already contains a manually added server named `gigma`,
-remove that old entry before installing the plugin:
+### Transport and existing installations
 
-```text
-codex mcp remove gigma
-codex plugin marketplace add https://github.com/Artypoul/gigma-mcp.git
-codex plugin add gigma-mcp@gigma-mcp
-```
-
-Installation only installs the transport and skills. It does not log the owner
-into a workspace and does not prove production availability.
-
-For this package's native chat flow, do **not** run `codex mcp login gigma`.
-The server permits discovery of the native dialog tools without credentials.
-The portable MCP entry contains the transport type and URL, with no embedded
-credentials or per-server authentication extension. Select transport
-authentication **None** if the host's connection flow asks for it. The package
-uses the slash route
-`https://api.auth.gigma.ru/mcp/owner/` to avoid a POST redirect. The live
-server may also advertise host-managed OAuth for other confidential transport
-clients. If the active host requires OAuth before it exposes `erp_dialog_*`,
-stop and report a transport contract mismatch; do not mix OAuth and native
-callback in one attempt.
-
-### Updating from 0.3.0
+The native callback transport uses Streamable HTTP at
+`https://api.auth.gigma.ru/mcp/owner/`. Select transport authentication **None**
+if the host asks; discovery does not grant access to a workspace. Do not run
+`codex mcp login gigma` for this native flow. Host-managed OAuth is a separate
+mode, and a host demanding OAuth before exposing `erp_dialog_*` must be
+reported as a transport mismatch.
 
 Version 0.3.0 put `extensions.com.openai.auth` inside the portable MCP server
 entry. The [Codex portable parser at the inspected commit](https://github.com/openai/codex/blob/b9559ff737000a4fcf7a0e12c3353cca1ea4d008/codex-rs/codex-mcp/src/agent_plugin_config.rs)
-rejects unknown server fields, so it can skip `gigma` while loading the skills.
-Version 0.3.1 removes that unsupported field. This fixes the configuration
-rejection in that parser; host installation, tool discovery and owner login
-remain separate checks. The endpoint and native callback flow are unchanged.
-
-### Verify automatic registration
-
-With Codex installed, run the repository's read-only client check:
-
-```text
-python check_client_registration.py --regression-check
-```
-
-It asks the real Codex loader to read a temporary copy of this plugin and checks
-for one `gigma` MCP server and all six skills. The regression check also verifies
-that the former unsupported field reproduces the missing server. It does not
-install the plugin, start an agent turn, call Gigma tools or perform owner login.
-CI runs this check against the built ZIP using pinned Codex 0.170.0. Startup or
-inspection failures fail the job instead of reporting successful registration.
+rejects that field and can omit the server while still loading skills.
+Version 0.3.1 removed it. Update older installations to the current marketplace
+version; keep the server entry limited to the supported transport and URL.
+The endpoint and native callback flow are unchanged.
 
 ## Connect Gigma
 

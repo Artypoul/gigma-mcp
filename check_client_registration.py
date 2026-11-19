@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Check a package with the real Codex loader, without installing or logging in.
+"""Check a repository or package with the real Codex loader, without logging in.
 
-Only app-server initialize and plugin/read requests are sent. Each read uses a
-temporary, single-plugin marketplace and a package copy. No model turn, MCP
+Only app-server initialize and plugin/read requests are sent. Repository mode
+preserves the actual marketplace declaration and its package's relative path;
+package/archive mode uses a temporary, single-plugin marketplace. No model turn, MCP
 tools/call, plugin installation, or owner authentication is performed. HOME,
 CODEX_HOME and the user's configuration are not changed. Run on a clean CI
 runner to avoid unrelated host startup requirements.
@@ -33,6 +34,8 @@ EXPECTED_SKILLS = {
 }
 MAX_OUTPUT_BYTES = 4 * 1024 * 1024
 MAX_ARCHIVE_BYTES = 64 * 1024 * 1024
+MARKETPLACE_RELATIVE = Path(".agents/plugins/marketplace.json")
+PACKAGE_RELATIVE = Path("plugins") / PLUGIN_NAME
 
 
 class CheckFailure(Exception):
@@ -98,12 +101,7 @@ def prepare_marketplace(source: Path, root: Path, *, regression: bool) -> Path:
     if manifest.get("name") != PLUGIN_NAME:
         raise CheckFailure("Input does not identify the gigma-mcp plugin")
     if regression:
-        path = package / "mcp.json"
-        config = json.loads(path.read_text(encoding="utf-8"))
-        config["mcpServers"]["gigma"]["extensions"] = {
-            "com.openai": {"auth": {"type": "none"}}
-        }
-        path.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
+        add_regression_field(package)
     marketplace = root / ".agents" / "plugins" / "marketplace.json"
     marketplace.parent.mkdir(parents=True)
     marketplace.write_text(json.dumps({
@@ -115,6 +113,91 @@ def prepare_marketplace(source: Path, root: Path, *, regression: bool) -> Path:
         }],
     }), encoding="utf-8")
     return marketplace
+
+
+def add_regression_field(package: Path) -> None:
+    """Reproduce the old parser failure in a disposable package copy only."""
+    path = package / "mcp.json"
+    config = json.loads(path.read_text(encoding="utf-8"))
+    config["mcpServers"]["gigma"]["extensions"] = {
+        "com.openai": {"auth": {"type": "none"}}
+    }
+    path.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
+
+
+def prepare_repository_marketplace(
+    repository: Path, root: Path, *, regression: bool,
+) -> tuple[Path, str]:
+    """Stage the real catalog and selected package without rewriting their paths.
+
+    Copy only the selected package and marketplace, not repository metadata,
+    unrelated plugins, or files outside the selected tree. Reject redirects
+    before any package content is read or copied.
+    """
+    if not repository.is_dir() or repository.is_symlink():
+        raise CheckFailure("Marketplace root must be a regular directory")
+    repository = repository.resolve()
+    for relative in (Path(".agents"), Path(".agents/plugins"), MARKETPLACE_RELATIVE):
+        if (repository / relative).is_symlink():
+            raise CheckFailure("Marketplace declaration must not use symbolic links")
+    marketplace = repository / MARKETPLACE_RELATIVE
+    if not marketplace.is_file():
+        raise CheckFailure("Repository is missing .agents/plugins/marketplace.json")
+    if marketplace.stat().st_size > MAX_OUTPUT_BYTES:
+        raise CheckFailure("Marketplace declaration exceeds the bounded probe limit")
+    contents = marketplace.read_bytes()
+    try:
+        catalog = json.loads(contents)
+    except (ValueError, UnicodeDecodeError) as exc:
+        raise CheckFailure("Repository marketplace is not valid JSON") from exc
+    if not isinstance(catalog, dict) or catalog.get("name") != PLUGIN_NAME:
+        raise CheckFailure("Repository marketplace must identify gigma-mcp")
+    entries = catalog.get("plugins")
+    if not isinstance(entries, list) or not all(isinstance(entry, dict) for entry in entries):
+        raise CheckFailure("Repository marketplace plugins must be an array of entries")
+    matches = [entry for entry in entries if entry.get("name") == PLUGIN_NAME]
+    if len(matches) != 1:
+        raise CheckFailure("Repository marketplace must contain exactly one gigma-mcp entry")
+    source = matches[0].get("source")
+    if not isinstance(source, dict) or source.get("source") != "local":
+        raise CheckFailure("Gigma marketplace entry must declare a local package source")
+    relative = source.get("path")
+    if not isinstance(relative, str) or not relative.strip() or any(
+        character in relative for character in ("\\", ":", "\x00")
+    ):
+        raise CheckFailure("Gigma marketplace source path is invalid")
+    package_path = PurePosixPath(relative)
+    if package_path.is_absolute() or ".." in package_path.parts:
+        raise CheckFailure("Gigma marketplace source must stay inside the repository")
+    if package_path.as_posix() != PACKAGE_RELATIVE.as_posix():
+        raise CheckFailure("Gigma marketplace source must select plugins/gigma-mcp")
+    for length in range(1, len(package_path.parts) + 1):
+        if (repository.joinpath(*package_path.parts[:length])).is_symlink():
+            raise CheckFailure("Gigma marketplace source must not use symbolic links")
+    package = repository.joinpath(*package_path.parts)
+    if not package.is_dir() or not package.resolve().is_relative_to(repository):
+        raise CheckFailure("Gigma marketplace source package is missing or outside the repository")
+    manifest_path = package / "plugin.json"
+    if not manifest_path.is_file() or manifest_path.is_symlink():
+        raise CheckFailure("Gigma marketplace source needs a regular plugin.json")
+    try:
+        manifest = json.loads(manifest_path.read_bytes())
+    except (ValueError, UnicodeDecodeError) as exc:
+        raise CheckFailure("Gigma marketplace package manifest is not valid JSON") from exc
+    if not isinstance(manifest, dict) or manifest.get("name") != PLUGIN_NAME:
+        raise CheckFailure("Marketplace entry and package identity do not match")
+    version = manifest.get("version")
+    if not isinstance(version, str) or not version.strip():
+        raise CheckFailure("Gigma marketplace package version is missing")
+    copied_package = root / PACKAGE_RELATIVE
+    copied_package.parent.mkdir(parents=True, exist_ok=True)
+    copy_package(package, copied_package)
+    copied_marketplace = root / MARKETPLACE_RELATIVE
+    copied_marketplace.parent.mkdir(parents=True, exist_ok=True)
+    copied_marketplace.write_bytes(contents)
+    if regression:
+        add_regression_field(copied_package)
+    return copied_marketplace, version
 
 
 def read_with_codex(codex: str, marketplace: Path, runtime: Path, timeout: float) -> tuple[dict, list[str]]:
@@ -244,7 +327,10 @@ def read_with_codex(codex: str, marketplace: Path, runtime: Path, timeout: float
     return response, sorted(set(diagnostics))
 
 
-def check_result(response: dict, diagnostics: list[str], *, regression: bool) -> dict:
+def check_result(
+    response: dict, diagnostics: list[str], *, regression: bool,
+    expected_version: str | None = None,
+) -> dict:
     case = "regression" if regression else "candidate"
     if "error" in response:
         reason = safe_diagnostic(json.dumps(response["error"]))
@@ -255,6 +341,10 @@ def check_result(response: dict, diagnostics: list[str], *, regression: bool) ->
     plugin = result.get("plugin") if isinstance(result, dict) else None
     if not isinstance(plugin, dict) or plugin.get("summary", {}).get("name") != PLUGIN_NAME:
         raise CheckFailure(f"{case}: plugin/read did not return the requested plugin")
+    versions = [container["version"] for container in (plugin, plugin["summary"])
+                if container.get("version") is not None]
+    if expected_version is not None and any(version != expected_version for version in versions):
+        raise CheckFailure(f"{case}: loader version does not match the marketplace package")
     servers, skills = plugin.get("mcpServers"), plugin.get("skills")
     if not isinstance(servers, list) or not all(isinstance(name, str) for name in servers) or not isinstance(skills, list):
         raise CheckFailure(f"{case}: plugin/read returned malformed component lists")
@@ -284,6 +374,10 @@ def main() -> int:
     inputs = parser.add_mutually_exclusive_group()
     inputs.add_argument("--package", type=Path, default=ROOT / "plugins" / PLUGIN_NAME)
     inputs.add_argument("--archive", type=Path, help="Built single-plugin ZIP to check")
+    inputs.add_argument(
+        "--marketplace-root", type=Path,
+        help="Repository root whose actual .agents/plugins/marketplace.json and source path are checked",
+    )
     parser.add_argument("--codex", default="codex", help="Codex executable (CI must pin its version)")
     parser.add_argument("--timeout", type=float, default=20, help="Maximum seconds per app-server process (1–60)")
     parser.add_argument("--regression-check", action="store_true", help="First prove the loader rejects the old server extensions block")
@@ -301,12 +395,26 @@ def main() -> int:
         print("Codex loader: " + match.group(1).decode(), flush=True)
         with tempfile.TemporaryDirectory(prefix="gigma-registration-") as directory:
             temporary = Path(directory)
-            source = unpack_archive(args.archive, temporary / "archive") if args.archive else args.package.absolute()
+            source = None if args.marketplace_root else (
+                unpack_archive(args.archive, temporary / "archive") if args.archive else args.package.absolute()
+            )
             for regression in ([True, False] if args.regression_check else [False]):
                 case = "regression" if regression else "candidate"
-                marketplace = prepare_marketplace(source, temporary / case, regression=regression)
+                expected_version = None
+                if args.marketplace_root:
+                    marketplace, expected_version = prepare_repository_marketplace(
+                        args.marketplace_root, temporary / case, regression=regression,
+                    )
+                else:
+                    assert source is not None
+                    marketplace = prepare_marketplace(source, temporary / case, regression=regression)
                 response, diagnostics = read_with_codex(codex, marketplace, temporary / (case + "-runtime"), args.timeout)
-                print(json.dumps(check_result(response, diagnostics, regression=regression), sort_keys=True), flush=True)
+                result = check_result(
+                    response, diagnostics, regression=regression, expected_version=expected_version,
+                )
+                if args.marketplace_root:
+                    result.update({"source": "repository", "package_version": expected_version})
+                print(json.dumps(result, sort_keys=True), flush=True)
         print("Registration OK: real Codex loader found gigma and all six skills; owner login was not tested")
         return 0
     except CheckFailure as exc:

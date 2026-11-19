@@ -4,74 +4,94 @@ This guide covers the public plugin and its native owner callback flow. It does
 not enable the server, change production flags, or replace the server's
 OAuth/PKCE mode for confidential clients.
 
-## Install
+## Install from the GitHub marketplace
 
-### ChatGPT web
+Use repository **https://github.com/Artypoul/gigma-mcp**. The marketplace is
+`gigma-mcp`; the plugin selector is `gigma-mcp@gigma-mcp`. The entry resolves to
+`plugins/gigma-mcp` and includes six skills plus one remote `gigma` MCP declaration.
 
-Follow [the ChatGPT setup guide](chatgpt-setup.md). Install the portable private
-plugin or add the existing HTTPS MCP endpoint using ChatGPT's custom-server
-flow. Select transport authentication **None** for this native callback
-contract. The owner still authenticates through the callback tools.
+### ChatGPT
 
-Codex marketplace commands do not configure ChatGPT web. Check the actual
-discovered tools in the ChatGPT conversation before beginning callback login;
-the presence of a skill or plugin card alone is not sufficient.
+In a workspace that supports marketplace imports, an admin opens **Admin →
+Plugins → Add → Import marketplace**. Enter the repository URL, leave Path
+empty, and use the default branch or `main`. Inspect the per-plugin import
+result, then configure the installation policy and install **Gigma MCP**.
+For updates use **Admin → Plugins → Marketplaces → selected marketplace →
+Sync now**. See [the ChatGPT setup guide](chatgpt-setup.md) for details.
+
+These are workspace-admin controls; personal-account availability can differ.
+OpenAI also documents that imported plugins declaring MCP servers may be
+**Desktop only**, even with an HTTPS endpoint. A repository import does not
+by itself confirm web tool availability or an owner session. See
+[OpenAI's plugin management guide](https://learn.chatgpt.com/docs/enterprise/plugin-management).
 
 ### Codex
 
 ```text
-codex plugin marketplace add https://github.com/Artypoul/gigma-mcp.git
+codex plugin marketplace add Artypoul/gigma-mcp --ref main
 codex plugin add gigma-mcp@gigma-mcp
 ```
 
-The plugin declares `gigma` in its root `mcp.json`. A compatible client registers
-that MCP connection when the plugin is installed and enabled, alongside its
-skills. Do not add a second server with `codex mcp add`.
-
-If a manually configured server named `gigma` exists, remove that entry first:
+To update an existing installation:
 
 ```text
-codex mcp remove gigma
+codex plugin marketplace upgrade gigma-mcp
+codex plugin add gigma-mcp@gigma-mcp
 ```
 
-Keep one `gigma` registration only. Close old Gigma chats and restart the
-client after removing a manual entry or updating the plugin. Inspect the plugin's
-MCP connection in the client and confirm that the new chat exposes
-`erp_dialog_check`, `erp_dialog_start`, `erp_dialog_status`, `erp_dialog_connect`
-and `erp_dialog_me`. Skills alone do not confirm server registration.
-Before connecting an owner, run the read-only live contract check from either
-the installed plugin directory (alongside its `README.md` and `mcp.json`) or the
-repository checkout root:
+The plugin declares `gigma` in its root `mcp.json`. The client loads that MCP
+configuration alongside its skills. Keep one `gigma` registration only; remove
+an old manually configured duplicate only if it exists. Start a new conversation
+after an update and verify that `erp_dialog_check`, `erp_dialog_start`,
+`erp_dialog_status`, `erp_dialog_connect` and `erp_dialog_me` are available.
+Adding a marketplace in Codex configures Codex, not a separate ChatGPT account.
 
-```text
-python check_live_contract.py
-```
-
-The check must report a text-only contract. If the client still shows a choice
-card, it is using stale or different metadata; do not answer the same choice in
-text, and start a fresh client chat after cleanup.
-
-Do not expect owner authentication at this point. Installation is not login.
-
-For an update from 0.3.0, install 0.3.1 of the existing plugin. Version 0.3.0
-placed an `extensions` field in the portable server entry; the inspected
-[Codex parser](https://github.com/openai/codex/blob/b9559ff737000a4fcf7a0e12c3353cca1ea4d008/codex-rs/codex-mcp/src/agent_plugin_config.rs)
-rejects that field and can omit the MCP server while loading the skills.
-Version 0.3.1 removes it, fixing this parser compatibility issue without changing
-the native callback flow. Confirm tool discovery in the installed client before
-starting owner login.
+Version 0.3.1 removed the unsupported `extensions` field used in version 0.3.0.
+The inspected [Codex parser](https://github.com/openai/codex/blob/b9559ff737000a4fcf7a0e12c3353cca1ea4d008/codex-rs/codex-mcp/src/agent_plugin_config.rs)
+can otherwise omit the MCP server while loading skills. Update an older
+installation to the current marketplace version; the native callback flow
+remains unchanged.
 
 ### Claude Code
 
 ```text
-claude plugin marketplace add https://github.com/Artypoul/gigma-mcp.git
+claude plugin marketplace add Artypoul/gigma-mcp
 claude plugin install gigma-mcp@gigma-mcp
 ```
 
 ### Cursor
 
-Install `gigma-mcp` from the repository marketplace, or add the package's
-`plugins/gigma-mcp/mcp.json` through Cursor MCP settings.
+Install the `gigma-mcp` entry from the repository marketplace. The entry's source
+is `plugins/gigma-mcp`, including its Cursor manifest and MCP configuration.
+
+## Verify installation
+
+From a repository checkout, with Codex installed:
+
+```text
+python validate_plugin.py
+python check_client_registration.py --marketplace-root .
+```
+
+The real client reads the checked-in marketplace catalog and its declared
+plugin source. The check requires all six skills and exactly one MCP server,
+`gigma`. It does not install the plugin or authenticate an owner.
+
+From either a repository checkout or the installed plugin directory:
+
+```text
+python check_live_contract.py
+```
+
+This separate read-only check inspects the server's discovery contract without
+calling owner tools. It must report a text-only contract. If a client still
+shows a choice card, inspect stale or different metadata; do not answer the
+same login choice twice.
+
+For a ZIP-only client, `python build_chatgpt_package.py` from a checkout builds
+a separate portable package. That artifact does not establish a GitHub
+marketplace subscription. The package's `mcp.json` already contains the server
+endpoint, so marketplace installation does not require a manual MCP entry.
 
 ## Native owner login
 
