@@ -14,7 +14,13 @@ ROOT = Path(__file__).resolve().parent
 PACKAGE = ROOT / "plugins" / "gigma-mcp"
 MCP_URL = "https://api.auth.gigma.ru/mcp/owner/"
 LIVE_CHECK = ROOT / "check_live_contract.py"
-VERSION = "0.3.1"
+VERSION = "0.3.2"
+MARKETPLACE_NAME = "gigma-mcp"
+MARKETPLACE_FILES = (
+    ".agents/plugins/marketplace.json",
+    ".claude-plugin/marketplace.json",
+    ".cursor-plugin/marketplace.json",
+)
 
 REQUIRED_DOCS = (
     ROOT / "docs/chatgpt-setup.md",
@@ -54,6 +60,58 @@ def load(path: Path) -> dict[str, object]:
 
 def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
+
+
+def validate_marketplaces(root: Path) -> None:
+    """Keep the public install selector and all catalog sources usable.
+
+    Checking only plugins[0].source lets a renamed marketplace, renamed entry,
+    duplicate entry or wrong source kind pass while installation fails.
+    """
+    package = root / "plugins" / MARKETPLACE_NAME
+    if package.is_symlink() or package.parent.is_symlink():
+        raise ValueError("marketplace plugin source must not be a symlink")
+    manifest_path = package / "plugin.json"
+    if not manifest_path.is_file():
+        raise ValueError("marketplace plugin source is missing its plugin.json")
+    package_manifest = load(manifest_path)
+    if package_manifest.get("name") != MARKETPLACE_NAME:
+        raise ValueError("marketplace source manifest name mismatch")
+    version = package_manifest.get("version")
+    for relative in MARKETPLACE_FILES:
+        marketplace = load(root / relative)
+        if marketplace.get("name") != MARKETPLACE_NAME:
+            raise ValueError(f"{relative}: marketplace name breaks the public install selector")
+        entries = marketplace.get("plugins")
+        if not isinstance(entries, list) or len(entries) != 1:
+            raise ValueError(f"{relative}: marketplace must contain exactly one plugin")
+        entry = entries[0]
+        if not isinstance(entry, dict) or entry.get("name") != MARKETPLACE_NAME:
+            raise ValueError(f"{relative}: marketplace plugin name mismatch")
+        source = entry.get("source")
+        if relative.startswith(".agents/"):
+            if not isinstance(source, dict) or source.get("source") != "local":
+                raise ValueError(f"{relative}: marketplace source must be local")
+            source_path = source.get("path")
+            policy = entry.get("policy")
+            if policy != {"installation": "AVAILABLE", "authentication": "ON_USE"}:
+                raise ValueError(f"{relative}: marketplace installation policy mismatch")
+        else:
+            source_path = source
+        if relative == ".claude-plugin/marketplace.json":
+            owner = marketplace.get("owner")
+            owner_name = owner.get("name") if isinstance(owner, dict) else None
+            if not isinstance(owner_name, str) or not owner_name.strip():
+                raise ValueError(f"{relative}: marketplace requires an owner name")
+        if source_path != "./plugins/gigma-mcp":
+            raise ValueError(f"{relative}: marketplace source must be ./plugins/gigma-mcp")
+        if "version" in entry and entry["version"] != version:
+            raise ValueError(f"{relative}: marketplace entry version mismatch")
+        metadata = marketplace.get("metadata", {})
+        if not isinstance(metadata, dict):
+            raise ValueError(f"{relative}: marketplace metadata must be an object")
+        if "version" in metadata and metadata["version"] != version:
+            raise ValueError(f"{relative}: marketplace metadata version mismatch")
 
 
 def validate_portable_mcp(mcp: dict[str, object]) -> None:
@@ -174,12 +232,7 @@ def main() -> int:
             raise FileNotFoundError(path)
         load(path)
 
-    for path in manifest_files[:3]:
-        entry = load(path)["plugins"][0]
-        source = entry["source"]
-        source_path = source["path"] if isinstance(source, dict) else source
-        if source_path != "./plugins/gigma-mcp":
-            raise ValueError(f"{path} points at {source_path!r}")
+    validate_marketplaces(ROOT)
 
     for path in REQUIRED_DOCS + REQUIRED_SKILLS + (LIVE_CHECK,):
         if not path.is_file():

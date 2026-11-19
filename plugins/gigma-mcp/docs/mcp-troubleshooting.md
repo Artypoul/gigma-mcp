@@ -1,5 +1,53 @@
 # Native owner MCP troubleshooting
 
+## GitHub import cannot find Gigma
+
+Use **https://github.com/Artypoul/gigma-mcp** as Source and leave Path empty.
+Select the default branch or `main`. The repository already contains
+`.agents/plugins/marketplace.json` and `.claude-plugin/marketplace.json`, both
+pointing to `plugins/gigma-mcp`. Path is a directory inside the repository,
+not a marketplace JSON filename or an MCP URL. Inspect the individual plugin's
+import report, not only the overall import status.
+
+The documented ChatGPT route is **Admin → Plugins → Add → Import marketplace**
+in an eligible workspace. It requires workspace-admin permissions; availability
+in a personal account can differ. See
+[OpenAI's plugin management guide](https://learn.chatgpt.com/docs/enterprise/plugin-management).
+
+For a source checkout, validate the actual catalog with:
+
+```text
+python validate_plugin.py
+python check_client_registration.py --marketplace-root .
+```
+
+## New repository commits do not update the installed plugin
+
+In ChatGPT use **Admin → Plugins → Marketplaces → selected marketplace →
+Sync now** and inspect the Gigma MCP result. A pinned commit stays pinned;
+a branch can receive new revisions. An invalid sync can keep the last working
+plugin version. A separately uploaded ZIP does not track this GitHub marketplace.
+Do not delete the marketplace to refresh it: deletion removes its imported
+plugins.
+
+In Codex, refresh and reinstall the existing selector:
+
+```text
+codex plugin marketplace upgrade gigma-mcp
+codex plugin add gigma-mcp@gigma-mcp
+```
+
+Then open a new conversation and inspect the available tools.
+
+## Imported plugin is Desktop only
+
+OpenAI documents that imported MCP plugins may be **Desktop only**, including
+remote HTTPS servers. Check the imported plugin's availability in the intended
+client. Adding `.app.json`, changing an otherwise valid MCP URL, or importing
+the same repository again does not by itself remove this host limitation.
+Use a supported client and verify that it exposes `erp_dialog_*` before owner
+login. See the [ChatGPT setup guide](chatgpt-setup.md).
+
 ## Version 0.3.0 loads skills but omits the MCP server
 
 Version 0.3.0 included `extensions.com.openai.auth` inside the portable
@@ -8,27 +56,25 @@ rejects unknown server fields, so it can skip `gigma` while retaining the skills
 Changing only a legacy compatibility manifest does not fix a client that reads
 the root portable configuration.
 
-Update the existing plugin to 0.3.1 and restart the client. That release removes
-the unsupported field; the portable server entry contains only the transport
-type and URL. The plugin supplies the MCP connection automatically, so no
-separate manual registration is needed. Check that the installed client exposes
+Update the existing plugin to the current marketplace version. Version 0.3.1
+removed the unsupported field; the portable server entry contains only the transport
+type and URL. The plugin supplies its MCP declaration, so no
+separate manual registration is part of marketplace installation. Check that the installed client exposes
 the `erp_dialog_*` tools. This fixes the parser rejection; host provisioning and
 successful owner login still need their own checks. The endpoint and native
 callback flow are unchanged.
 
-## Figma is available in ChatGPT, but Gigma is missing
+## Plugin card exists but dialog tools are missing
 
-Each plugin has its own installation and connection. A Gigma installation in
-Codex does not register it in ChatGPT web. Follow the
-[ChatGPT setup guide](chatgpt-setup.md) to install or select the correct cloud
-plugin, then inspect its discovered tools. Reuse an existing Gigma connection.
-Do not infer a backend outage from an absent tool in the conversation.
+Check the Gigma import report, installed version and client availability,
+including the **Desktop only** status above. Then inspect the tools in the
+selected conversation. A Codex marketplace installation configures Codex;
+a ChatGPT import is separate. Reuse the existing source and plugin.
 
-If the read-only live probe passes but ChatGPT has no `erp_dialog_*` tools,
-inspect the plugin's connection/import diagnostics and selected conversation.
-If a direct custom-server connection has stale metadata, use its Refresh action
-and select the plugin in a new conversation. A successful package upload alone
-does not prove the MCP connection was imported or installed.
+If the read-only live probe passes but the chat has no `erp_dialog_*` tools,
+inspect the host's import and runtime state. A package import or a loaded skill
+alone does not prove that the host exposed the MCP connection. Do not infer a
+Gigma backend outage from an absent tool in the conversation.
 
 ## UI and text question both appear
 

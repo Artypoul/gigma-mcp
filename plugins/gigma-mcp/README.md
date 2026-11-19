@@ -6,61 +6,76 @@ Streamable HTTP server configuration and skills for the native callback flow
 and owner operations. Authentication and business logic remain on the Gigma
 server.
 
-## Install
+## Install from the marketplace
+
+- Repository: **https://github.com/Artypoul/gigma-mcp**
+- Marketplace: **`gigma-mcp`**
+- Plugin selector: **`gigma-mcp@gigma-mcp`**
 
 ### ChatGPT
 
-Install the complete portable package through Plugin Creator, or add the
-remote server in **Plugins → + → Add custom MCP server** with URL
-`https://api.auth.gigma.ru/mcp/owner/` and authentication **None**. The complete
-package includes six workflow skills; a direct server connection supplies tools.
-Use [the ChatGPT guide](docs/chatgpt-setup.md) to verify the connection and avoid
-duplicate registrations. A local Codex marketplace install does not register a
-connection in ChatGPT web. A successful upload is not proof that tools were
-discovered or that an owner session exists.
+In a workspace with marketplace imports enabled, an admin uses **Admin →
+Plugins → Add → Import marketplace**, enters the repository URL and leaves
+Path empty. Review the **Gigma MCP** import result. For an existing import, use
+**Marketplaces → Gigma marketplace → Sync now**.
+Read [the ChatGPT guide](docs/chatgpt-setup.md) for permissions and exact fields;
+personal-account availability can differ.
 
-The complete plugin declares `gigma` in `mcp.json`. A compatible client registers
-that connection with the skills when the plugin is installed and enabled;
-complete any connection steps presented by the host. You do not need to add
-the same MCP endpoint separately.
+Imported plugins with MCP declarations can be marked **Desktop only**, even
+when their server is HTTPS. Check the plugin's availability in the intended
+client; a loaded skill does not confirm that web MCP tools are available.
+See [OpenAI's plugin management documentation](https://learn.chatgpt.com/docs/enterprise/plugin-management).
+A ZIP import is a separate package snapshot and does not configure GitHub updates.
 
-### Codex, Claude Code and Cursor
-
-Install from the public marketplace repository:
+### Codex
 
 ```text
-codex plugin marketplace add https://github.com/Artypoul/gigma-mcp.git
+codex plugin marketplace add Artypoul/gigma-mcp --ref main
 codex plugin add gigma-mcp@gigma-mcp
 ```
 
-The plugin supplies the MCP configuration automatically.
-Keep exactly one `gigma` registration in the active client. If an old manual entry exists,
-remove it, close old Gigma chats and restart the client. Check that the plugin's
-MCP connection and `erp_dialog_*` tools are available. Verify the live server
-contract separately with `python check_live_contract.py`.
-Run that command from this installed plugin directory, which contains
-`README.md`, `mcp.json` and the bundled [checker](check_live_contract.py).
-The checker also runs from the root of a repository checkout.
-
-Claude Code:
+For an existing installation:
 
 ```text
-claude plugin marketplace add https://github.com/Artypoul/gigma-mcp.git
+codex plugin marketplace upgrade gigma-mcp
+codex plugin add gigma-mcp@gigma-mcp
+```
+
+The plugin supplies the MCP configuration automatically. Keep exactly one `gigma` registration in the active client. Remove an old manual duplicate only
+if it exists. After an update, open a new conversation and check for the
+`erp_dialog_*` tools.
+
+### Claude Code and Cursor
+
+```text
+claude plugin marketplace add Artypoul/gigma-mcp
 claude plugin install gigma-mcp@gigma-mcp
 ```
 
-Cursor can install the `gigma-mcp` entry from the repository marketplace or
-use the package's `mcp.json` in Cursor MCP settings.
-
+Cursor can install the `gigma-mcp` entry from the repository marketplace.
 For the complete first-run procedure, read
 [docs/mcp-client-setup.md](docs/mcp-client-setup.md).
 
-Version 0.3.1 fixes the 0.3.0 configuration that allowed skills to load while
-the [Codex portable parser](https://github.com/openai/codex/blob/b9559ff737000a4fcf7a0e12c3353cca1ea4d008/codex-rs/codex-mcp/src/agent_plugin_config.rs)
-rejected the MCP entry's unsupported `extensions` field. The portable server
-entry now contains only the transport type and URL. This parser fix does not
-by itself verify host provisioning or sign an owner in; the native callback
-flow is unchanged.
+### Check the connection
+
+Run `python check_live_contract.py` from this installed plugin directory,
+which includes `mcp.json` and the bundled [checker](check_live_contract.py).
+It checks endpoint discovery without sending a phone number or starting login.
+From a full repository checkout, also run:
+
+```text
+python check_client_registration.py --marketplace-root .
+```
+
+This verifies the actual marketplace with the real Codex loader. The repository
+script is not part of this installed package.
+
+Version 0.3.1 removed the unsupported `extensions` field from the portable
+server entry after it caused the
+[Codex portable parser](https://github.com/openai/codex/blob/b9559ff737000a4fcf7a0e12c3353cca1ea4d008/codex-rs/codex-mcp/src/agent_plugin_config.rs)
+to omit the MCP server while loading skills. Update older installations to the
+current marketplace version. Host tool availability and the owner's callback
+login still require their own checks.
 
 ## Native owner connection
 
