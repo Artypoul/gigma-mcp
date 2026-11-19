@@ -1,12 +1,25 @@
 # Gigma MCP agent plugin
 
-This package connects Codex, Claude Code, and Cursor to the existing Gigma owner
-MCP at `https://api.auth.gigma.ru/mcp/owner`. It packages the remote
+This package connects ChatGPT, Codex, Claude Code, and Cursor to the existing Gigma owner
+MCP at `https://api.auth.gigma.ru/mcp/owner/`. It packages the remote
 Streamable HTTP server configuration and skills for the native callback flow
 and owner operations. Authentication and business logic remain on the Gigma
 server.
 
 ## Install
+
+### ChatGPT
+
+Install the complete portable package through Plugin Creator, or add the
+remote server in **Plugins → + → Add custom MCP server** with URL
+`https://api.auth.gigma.ru/mcp/owner/` and authentication **None**. The complete
+package includes six workflow skills; a direct server connection supplies tools.
+Use [the ChatGPT guide](docs/chatgpt-setup.md) to verify the connection and avoid
+duplicate registrations. A local Codex marketplace install does not register a
+connection in ChatGPT web. A successful upload is not proof that tools were
+discovered or that an owner session exists.
+
+### Codex, Claude Code and Cursor
 
 Install from the public marketplace repository:
 

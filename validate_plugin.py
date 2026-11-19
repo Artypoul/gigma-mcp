@@ -14,9 +14,10 @@ ROOT = Path(__file__).resolve().parent
 PACKAGE = ROOT / "plugins" / "gigma-mcp"
 MCP_URL = "https://api.auth.gigma.ru/mcp/owner/"
 LIVE_CHECK = ROOT / "check_live_contract.py"
-VERSION = "0.2.2"
+VERSION = "0.3.0"
 
 REQUIRED_DOCS = (
+    ROOT / "docs/chatgpt-setup.md",
     ROOT / "docs/mcp-client-setup.md",
     ROOT / "docs/gigma-project-workflows.md",
     ROOT / "docs/gigma-user-journey.md",
@@ -53,6 +54,52 @@ def load(path: Path) -> dict[str, object]:
 
 def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
+
+
+def validate_portable_metadata(
+    portable: dict[str, object], codex: dict[str, object]
+) -> None:
+    """Prevent a portable import from losing the legacy OpenAI presentation."""
+    if portable.get("$schema") != (
+        "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
+    ):
+        raise ValueError("portable plugin schema is missing or unsupported")
+    if {"skills", "mcpServers", "apps", "interface"} & portable.keys():
+        raise ValueError("portable manifest contains legacy top-level fields")
+    extensions = portable.get("extensions")
+    settings = extensions.get("com.openai") if isinstance(extensions, dict) else None
+    if not isinstance(settings, dict):
+        raise ValueError("portable manifest requires OpenAI metadata")
+    interface = settings.get("interface")
+    if not isinstance(interface, dict):
+        raise ValueError("portable manifest requires an interface object")
+    for field in (
+        "displayName", "shortDescription", "longDescription", "developerName", "category"
+    ):
+        value = interface.get(field)
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"portable interface requires {field}")
+    if len(interface["shortDescription"]) > 30:
+        raise ValueError("portable shortDescription exceeds 30 characters")
+    capabilities = interface.get("capabilities")
+    if not isinstance(capabilities, list) or any(
+        not isinstance(value, str) or not value.strip() for value in capabilities
+    ):
+        raise ValueError("portable interface capabilities must be an array of strings")
+    prompts = interface.get("defaultPrompt")
+    if isinstance(prompts, str):
+        prompts = [prompts]
+    if not isinstance(prompts, list) or not 1 <= len(prompts) <= 3 or any(
+        not isinstance(value, str) or not value.strip() for value in prompts
+    ):
+        raise ValueError("portable defaultPrompt must contain one to three prompts")
+    if interface != codex.get("interface"):
+        raise ValueError("portable and Codex interface metadata must match")
+    onboarding = settings.get("onboardingSkill")
+    if onboarding != "./skills/gigma-owner-setup/SKILL.md":
+        raise ValueError("portable onboardingSkill must use the packaged setup skill")
+    if onboarding != codex.get("onboardingSkill"):
+        raise ValueError("portable and Codex onboardingSkill must match")
 
 
 def assert_no_secret_values(paths: tuple[Path, ...]) -> None:
@@ -116,6 +163,10 @@ def main() -> int:
     validate_packaged_links(PACKAGE)
 
     mcp = load(PACKAGE / "mcp.json")
+    if mcp.get("$schema") != "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json":
+        raise ValueError("portable MCP schema is missing or unsupported")
+    if not isinstance(mcp.get("mcpServers"), dict) or set(mcp["mcpServers"]) != {"gigma"}:
+        raise ValueError("package must declare exactly one gigma MCP server")
     server = mcp["mcpServers"].get("gigma")
     if not isinstance(server, dict) or server["url"] != MCP_URL:
         raise ValueError("MCP URL mismatch")
@@ -123,11 +174,14 @@ def main() -> int:
         raise ValueError("MCP transport mismatch")
     if server["extensions"]["com.openai"]["auth"]["type"] != "none":
         raise ValueError("Native callback package must use auth.type none")
+    if {"auth", "server_url", "headers", "command", "env"} & server.keys():
+        raise ValueError("portable remote server contains unsupported connection fields")
 
     portable = load(PACKAGE / "plugin.json")
     codex = load(PACKAGE / ".codex-plugin/plugin.json")
     claude = load(PACKAGE / ".claude-plugin/plugin.json")
     cursor = load(PACKAGE / ".cursor-plugin/plugin.json")
+    validate_portable_metadata(portable, codex)
     for manifest in (portable, codex, claude, cursor):
         if manifest.get("name") != "gigma-mcp":
             raise ValueError("plugin manifest name mismatch")
@@ -147,6 +201,8 @@ def main() -> int:
         raise ValueError("Claude MCP transport mismatch")
     if cursor.get("mcpServers") != "./mcp.json":
         raise ValueError("Cursor MCP mapping mismatch")
+    if (PACKAGE / "LICENSE").read_bytes() != (ROOT / "LICENSE").read_bytes():
+        raise ValueError("packaged license must match the repository license")
 
     auth_skill = read_text(PACKAGE / "skills/gigma-owner-auth/SKILL.md")
     for required in (

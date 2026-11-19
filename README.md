@@ -1,7 +1,7 @@
 # Gigma MCP
 
-Public distribution repository for the Gigma owner MCP plugin for Codex, Claude
-Code, and Cursor. The package contains client manifests, the native callback
+Public distribution repository for the Gigma owner MCP plugin for ChatGPT,
+Codex, Claude Code, and Cursor. The package contains client manifests, the native callback
 skill, user-facing workflow documentation, and the remote MCP configuration.
 Authentication and business logic remain on the Gigma server.
 
@@ -9,7 +9,7 @@ Authentication and business logic remain on the Gigma server.
 
 This package connects an agent to the **Gigma owner MCP**:
 
-`https://api.auth.gigma.ru/mcp/owner`
+`https://api.auth.gigma.ru/mcp/owner/`
 
 The native chat flow signs an owner into a Gigma workspace through a callback
 call. It then lets the agent work with owner-side applications, subscription
@@ -24,6 +24,35 @@ Read [the project workflows](docs/gigma-project-workflows.md) to understand
 what the agent can do after connection.
 
 ## Install
+
+### ChatGPT
+
+Use the [ChatGPT setup guide (Russian)](docs/chatgpt-setup.md). A Codex
+marketplace installation does not register the server in ChatGPT web.
+
+The ChatGPT connection uses the existing HTTPS endpoint
+`https://api.auth.gigma.ru/mcp/owner/`, Streamable HTTP, and transport
+authentication **None**. Owner authentication still happens through the
+native callback tools; transport discovery does not grant workspace access.
+
+To build the complete private plugin, including its six workflow skills:
+
+```text
+python build_chatgpt_package.py
+```
+
+The builder validates the package and writes
+`dist/gigma-mcp-<version>-chatgpt.zip`. Install this single-plugin archive
+through Plugin Creator. Alternatively, add the endpoint using ChatGPT's
+**Plugins → + → Add custom MCP server** flow; that connection supplies tools,
+while the complete package also supplies the workflow skills. Reuse an existing
+Gigma connection instead of adding a duplicate.
+
+Installation and successful discovery must be checked separately. Verify the
+actual `erp_dialog_*` tools in the selected ChatGPT conversation before asking
+for a phone or beginning owner login.
+
+### Codex, Claude Code and Cursor
 
 Codex:
 

@@ -1,6 +1,6 @@
 ---
 name: gigma-owner-setup
-description: Install and verify the Gigma plugin and its native owner transport.
+description: Install, connect and troubleshoot Gigma MCP in ChatGPT or local agent clients; use when its tools are missing or setup needs verification.
 ---
 
 # Gigma owner setup
@@ -9,11 +9,19 @@ Use this skill for installation, first-run verification and transport
 troubleshooting. The `gigma-owner-auth` skill owns the callback flow; do not
 repeat its steps here.
 
-- Install the package from the public marketplace repository.
-- Verify the `gigma` server is present in the active client.
+- Identify the active host. For ChatGPT web, use the packaged
+  [ChatGPT setup guide](../../docs/chatgpt-setup.md) and the supported cloud
+  plugin connection flow. For Codex, Claude Code or Cursor, use the public
+  marketplace instructions in the client setup guide.
+- Reuse an existing Gigma plugin or connection when available. Verify the
+  actual discovered `erp_dialog_*` tools in the active conversation; a skill,
+  repository link or plugin card alone does not prove tool access.
 - Do not treat installation as owner login or production readiness.
 - For this native flow do not run `codex mcp login gigma`.
-- If `erp_dialog_*` tools are missing, stop and report the contract mismatch.
+- If `erp_dialog_*` tools are missing, report which layer is unverified:
+  plugin installation, MCP discovery or conversation tool availability. Do not
+  ask for a phone or start owner authentication before the tools are available.
+  Do not diagnose a backend outage without a failed live-server check.
 - Verify that the active client has exactly one `gigma` registration; remove a
   manually configured duplicate before starting a new chat.
 - Route connection, callback state, `erp_dialog_me` and logout to

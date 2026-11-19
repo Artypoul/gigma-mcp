@@ -37,6 +37,8 @@ class LiveContractInspectionTests(unittest.TestCase):
 
     def test_live_probe_only_discovers_metadata_and_never_calls_a_tool(self):
         initialize, tools, resources = contract()
+        for request_id, payload in enumerate((initialize, tools, resources), 1):
+            payload.update(jsonrpc="2.0", id=request_id)
         with patch(
             "check_live_contract.post_json",
             side_effect=[(200, initialize), (202, {}), (200, tools), (200, resources)],
@@ -48,6 +50,26 @@ class LiveContractInspectionTests(unittest.TestCase):
             ["initialize", "notifications/initialized", "tools/list", "resources/list"],
         )
         self.assertEqual(payloads[0]["params"]["protocolVersion"], PROTOCOL_VERSION)
+
+    def test_resources_are_optional_when_not_advertised(self):
+        initialize, tools, _ = contract()
+        initialize["result"]["capabilities"].pop("resources")
+        report = inspect_contract(initialize, tools)
+        self.assertTrue(report.ok, report.errors)
+
+    def test_advertised_resources_must_be_inspected(self):
+        initialize, tools, _ = contract()
+        self.assert_invalid(initialize, tools, None, "not inspected")
+
+    def test_malformed_resources_capability_is_rejected(self):
+        initialize, tools, resources = contract()
+        initialize["result"]["capabilities"]["resources"] = None
+        self.assert_invalid(initialize, tools, resources, "resources capability")
+
+    def test_resources_result_must_have_a_resources_array(self):
+        initialize, tools, resources = contract()
+        resources["result"] = {}
+        self.assert_invalid(initialize, tools, resources, "resources array")
 
     def test_each_native_tool_is_required_including_recovery(self):
         names = [item["name"] for item in FIXTURE["tools_list"]["result"]["tools"]]

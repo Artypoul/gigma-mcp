@@ -1,5 +1,19 @@
 # Native owner MCP troubleshooting
 
+## Figma is available in ChatGPT, but Gigma is missing
+
+Each plugin has its own installation and connection. A Gigma installation in
+Codex does not register it in ChatGPT web. Follow the
+[ChatGPT setup guide](chatgpt-setup.md) to install or select the correct cloud
+plugin, then inspect its discovered tools. Reuse an existing Gigma connection.
+Do not infer a backend outage from an absent tool in the conversation.
+
+If the read-only live probe passes but ChatGPT has no `erp_dialog_*` tools,
+inspect the plugin's connection/import diagnostics and selected conversation.
+If a direct custom-server connection has stale metadata, use its Refresh action
+and select the plugin in a new conversation. A successful package upload alone
+does not prove the MCP connection was imported or installed.
+
 ## UI and text question both appear
 
 The active client must use one `gigma` registration and one consent path. Remove
