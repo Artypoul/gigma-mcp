@@ -43,10 +43,12 @@ python build_chatgpt_package.py
 
 The builder validates the package and writes
 `dist/gigma-mcp-<version>-chatgpt.zip`. Install this single-plugin archive
-through Plugin Creator. Alternatively, add the endpoint using ChatGPT's
-**Plugins → + → Add custom MCP server** flow; that connection supplies tools,
-while the complete package also supplies the workflow skills. Reuse an existing
-Gigma connection instead of adding a duplicate.
+through Plugin Creator. The package declares one `gigma` MCP connection in
+`mcp.json`, so a compatible client registers it with the six skills when the
+plugin is installed and enabled. Complete any connection steps shown by the
+host; no separately added MCP server is needed. Update an existing Gigma plugin
+instead of creating a duplicate. The custom-server flow in the ChatGPT guide
+is an alternative for using the endpoint without the complete plugin.
 
 Installation and successful discovery must be checked separately. Verify the
 actual `erp_dialog_*` tools in the selected ChatGPT conversation before asking
@@ -61,10 +63,11 @@ codex plugin marketplace add https://github.com/Artypoul/gigma-mcp.git
 codex plugin add gigma-mcp@gigma-mcp
 ```
 
-Keep exactly one `gigma` registration in the active client. After removing an
-old manual entry or updating the plugin, close old Gigma chats and restart the
-client so it cannot reuse cached tool metadata. Verify the deployed text-only
-contract with:
+The plugin supplies the `gigma` server configuration automatically; there is no
+`codex mcp add` step. Keep exactly one `gigma` registration in the active client.
+After removing an old manual entry or updating the plugin, close old Gigma chats
+and restart the client. Check the plugin's MCP connection and the available
+`erp_dialog_*` tools. Separately verify the deployed text-only contract with:
 
 ```text
 python check_live_contract.py
@@ -93,13 +96,40 @@ Installation only installs the transport and skills. It does not log the owner
 into a workspace and does not prove production availability.
 
 For this package's native chat flow, do **not** run `codex mcp login gigma`.
-The package maps Codex to `auth.type: none` so native dialog tools can be
-discovered without a pasted token. The package transport uses the slash route
+The server permits discovery of the native dialog tools without credentials.
+The portable MCP entry contains the transport type and URL, with no embedded
+credentials or per-server authentication extension. Select transport
+authentication **None** if the host's connection flow asks for it. The package
+uses the slash route
 `https://api.auth.gigma.ru/mcp/owner/` to avoid a POST redirect. The live
 server may also advertise host-managed OAuth for other confidential transport
 clients. If the active host requires OAuth before it exposes `erp_dialog_*`,
 stop and report a transport contract mismatch; do not mix OAuth and native
 callback in one attempt.
+
+### Updating from 0.3.0
+
+Version 0.3.0 put `extensions.com.openai.auth` inside the portable MCP server
+entry. The [Codex portable parser at the inspected commit](https://github.com/openai/codex/blob/b9559ff737000a4fcf7a0e12c3353cca1ea4d008/codex-rs/codex-mcp/src/agent_plugin_config.rs)
+rejects unknown server fields, so it can skip `gigma` while loading the skills.
+Version 0.3.1 removes that unsupported field. This fixes the configuration
+rejection in that parser; host installation, tool discovery and owner login
+remain separate checks. The endpoint and native callback flow are unchanged.
+
+### Verify automatic registration
+
+With Codex installed, run the repository's read-only client check:
+
+```text
+python check_client_registration.py --regression-check
+```
+
+It asks the real Codex loader to read a temporary copy of this plugin and checks
+for one `gigma` MCP server and all six skills. The regression check also verifies
+that the former unsupported field reproduces the missing server. It does not
+install the plugin, start an agent turn, call Gigma tools or perform owner login.
+CI runs this check against the built ZIP using pinned Codex 0.170.0. Startup or
+inspection failures fail the job instead of reporting successful registration.
 
 ## Connect Gigma
 

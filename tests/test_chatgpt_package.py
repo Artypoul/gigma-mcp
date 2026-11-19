@@ -131,6 +131,19 @@ class ChatGPTPackageTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(self.output.read_bytes(), original)
 
+    def test_auth_extension_that_hides_mcp_in_codex_cannot_be_released(self):
+        original = self.build()
+        path = self.package / "mcp.json"
+        mcp = json.loads(path.read_text(encoding="utf-8"))
+        mcp["mcpServers"]["gigma"]["extensions"] = {
+            "com.openai": {"auth": {"type": "none"}}
+        }
+        path.write_text(json.dumps(mcp), encoding="utf-8")
+        result = self.run_builder()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("unsupported fields such as extensions", result.stdout)
+        self.assertEqual(self.output.read_bytes(), original)
+
     def test_app_binding_cannot_be_silently_omitted_from_portable_remote_archive(self):
         original = self.build()
         path = self.package / "plugin.json"
