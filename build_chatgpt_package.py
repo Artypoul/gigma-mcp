@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Validate and build one portable Gigma MCP plugin ZIP for ChatGPT import.
+"""Validate and build a Gigma MCP plugin ZIP for ChatGPT import.
 
 The archive contains a single gigma-mcp/ directory, never the repository's
 marketplaces or compatibility overlays. Source file times and permissions do
-not affect the archive. Building does not install or authenticate the plugin.
+not affect the archive. The default is portable; --chatgpt-app-id builds a
+private archive bound to an already registered App. Building does not install
+or authenticate the plugin.
 """
 
 from __future__ import annotations
@@ -12,6 +14,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import stat
 import tempfile
@@ -96,7 +99,11 @@ def _check_isolated_links(files: dict[str, bytes]) -> None:
         validate_plugin.validate_packaged_links(package)
 
 
-def build_package(output: Path | None = None) -> Path:
+def build_package(output: Path | None = None, chatgpt_app_id: str | None = None) -> Path:
+    if chatgpt_app_id is not None and not re.fullmatch(
+        r"(?:asdk_app_|connector_|templated_apps_)[A-Za-z0-9][A-Za-z0-9_-]*", chatgpt_app_id
+    ):
+        raise ValueError("invalid ChatGPT App ID: expected a supported prefix and safe suffix")
     # Check selected paths before validators or readers can traverse a symlink.
     paths = _package_paths(PACKAGE)
     if validate_plugin.main() != 0:
@@ -105,6 +112,13 @@ def build_package(output: Path | None = None) -> Path:
     manifest = json.loads(files["plugin.json"])
     if manifest.get("extensions", {}).get("com.openai", {}).get("apps") is not None:
         raise ValueError("app-bound plugins require a separate archive including .app.json")
+    if chatgpt_app_id is not None:
+        manifest.setdefault("extensions", {}).setdefault("com.openai", {})["apps"] = "./.app.json"
+        files["plugin.json"] = (json.dumps(manifest, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
+        files[".app.json"] = (json.dumps(
+            {"apps": {"gigma": {"id": chatgpt_app_id, "required": True}}}, indent=2
+        ) + "\n").encode("utf-8")
+        del files["mcp.json"]
     name, version = manifest["name"], manifest["version"]
     if name != PACKAGE.name or not isinstance(version, str) or any(
         character not in "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-+"
@@ -113,7 +127,7 @@ def build_package(output: Path | None = None) -> Path:
         raise ValueError("plugin name/version cannot form a safe archive path")
     destination = (
         Path(output) if output is not None
-        else ROOT / "dist" / f"{name}-{version}-chatgpt.zip"
+        else ROOT / "dist" / f"{name}-{version}-chatgpt{'-app' if chatgpt_app_id is not None else ''}.zip"
     ).absolute()
     if destination.is_symlink():
         raise ValueError("archive output must not be a symlink")
@@ -154,11 +168,18 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--output", type=Path,
-        help="ZIP path outside the plugin directory (default: dist/<name>-<version>-chatgpt.zip)",
+        help=("ZIP path outside the plugin directory (default: "
+              "dist/<name>-<version>-chatgpt.zip, or -chatgpt-app.zip when bound)"),
+    )
+    parser.add_argument(
+        "--chatgpt-app-id",
+        help=("build a private archive bound to an already registered Gigma App ID "
+              "(asdk_app_, connector_, or templated_apps_ prefix). Syntax validation "
+              "does not verify registration or ownership."),
     )
     args = parser.parse_args()
     try:
-        archive = build_package(args.output)
+        archive = build_package(args.output, args.chatgpt_app_id)
     except (OSError, ValueError, TypeError, KeyError, zipfile.BadZipFile) as exc:
         print(f"Package build failed: {exc}")
         return 1
