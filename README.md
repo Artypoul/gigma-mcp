@@ -5,6 +5,30 @@ Codex, Claude Code, and Cursor. The package contains client manifests, the nativ
 skill, user-facing workflow documentation, and the remote MCP configuration.
 Authentication and business logic remain on the Gigma server.
 
+## Команды из чата
+
+После подключения сервера выберите Gigma MCP через `@` и напишите:
+
+| Сообщение | Реальный инструмент |
+| --- | --- |
+| **Гигма, команды** | Меню и проверка доступности инструментов, без входа |
+| **Гигма, мой проект** | `erp_dialog_me` |
+| **Гигма, приложения** | `erp_list_applications` |
+| **Гигма, тарифы приложения …** | `erp_subscription_plans_list` |
+| **Гигма, все активные подписки** | `erp_workspace_subscriptions_list` |
+| **Гигма, платёжные инциденты приложения …** | `erp_payment_review_cases_list` |
+| **Гигма, отключись** | `erp_dialog_logout` |
+
+[Полный каталог: 77 инструментов и готовые фразы](docs/chat-commands.md).
+Бизнес-команды используют подтверждённую сессию владельца. Вход остаётся
+через существующий callback Gigma.
+
+**Для веб-чата сначала нужен зарегистрированный MCP-сервер в ChatGPT.**
+Адрес в GitHub и загруженные навыки сами по себе не предоставляют инструменты.
+Используйте [точные поля подключения](docs/chatgpt-setup.md#команды-в-веб-чате-chatgpt):
+`https://api.auth.gigma.ru/mcp/owner/`, Streamable HTTP, **No authentication**
+на уровне транспорта. Callback выполняется внутри команд `erp_dialog_*`.
+
 ## What this package is
 
 This package connects an agent to the **Gigma owner MCP**:
@@ -41,6 +65,11 @@ in the plugin configuration.
 | Cursor | `.cursor-plugin/marketplace.json` |
 
 ### ChatGPT
+
+For callable tools in ChatGPT web, follow the
+[custom MCP connection route](docs/chatgpt-setup.md#команды-в-веб-чате-chatgpt).
+The marketplace route below distributes the repository package; verify the
+host's tool availability separately.
 
 In a workspace with marketplace imports enabled, an admin opens **Admin →
 Plugins → Add → Import marketplace** and enters
@@ -130,6 +159,21 @@ six skills and its MCP declaration. It does not contain the repository's
 marketplace catalogs or establish GitHub updates. Use the marketplace route
 above when installing from this repository.
 
+For a **private** package that references an already registered Gigma App,
+set `GIGMA_CHATGPT_APP_ID` to its verified App ID and run:
+
+```text
+python build_chatgpt_package.py --chatgpt-app-id "$GIGMA_CHATGPT_APP_ID"
+```
+
+This writes `dist/gigma-mcp-<version>-chatgpt-app.zip` with a required
+`.app.json` reference and the same six skills, without a second MCP declaration.
+It does not register the server, grant access, install the package or perform
+owner login. The builder checks ID syntax only. See
+[App binding and the GitHub reference](docs/chatgpt-setup.md#привязка-пакета-к-приложению-как-у-github)
+before using this variant. The default portable archive and marketplace
+configuration remain unchanged.
+
 ### Transport and existing installations
 
 The native callback transport uses Streamable HTTP at
@@ -148,7 +192,8 @@ The endpoint and native callback flow are unchanged.
 
 ## Connect Gigma
 
-After installation, open a new agent chat and write:
+After installation and verification that `erp_dialog_*` tools are exposed,
+open a new agent chat and write:
 
 ```text
 Connect me to Gigma

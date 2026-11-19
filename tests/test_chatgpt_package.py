@@ -30,10 +30,12 @@ class ChatGPTPackageTests(unittest.TestCase):
         self.package = self.repository / "plugins" / "gigma-mcp"
         self.output = self.directory / "gigma.zip"
 
-    def run_builder(self, *, output=True):
+    def run_builder(self, *, output=True, app_id=None):
         command = [sys.executable, str(self.repository / "build_chatgpt_package.py")]
         if output:
             command.extend(["--output", str(self.output)])
+        if app_id is not None:
+            command.extend(["--chatgpt-app-id", app_id])
         return subprocess.run(
             command, cwd=self.directory, text=True, capture_output=True, timeout=15
         )
@@ -84,6 +86,61 @@ class ChatGPTPackageTests(unittest.TestCase):
             self.assertNotIn("gigma-mcp/.codex-plugin/plugin.json", names)
             self.assertNotIn("gigma-mcp/.claude-plugin/plugin.json", names)
             self.assertNotIn("gigma-mcp/.cursor-plugin/plugin.json", names)
+
+    def test_bound_archive_has_app_binding_and_preserves_portable_archive_and_source(self):
+        result = self.run_builder(output=False)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        source_manifest = (self.package / "plugin.json").read_bytes()
+        source_mcp = (self.package / "mcp.json").read_bytes()
+        version = json.loads(source_manifest)["version"]
+        portable_path = self.repository / "dist" / f"gigma-mcp-{version}-chatgpt.zip"
+        portable = portable_path.read_bytes()
+        app_id = "asdk_app_FAKE_TEST_ONLY_123"
+        result = self.run_builder(output=False, app_id=app_id)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        bound = self.repository / "dist" / f"gigma-mcp-{version}-chatgpt-app.zip"
+        with zipfile.ZipFile(bound) as archive, zipfile.ZipFile(portable_path) as default:
+            self.assertEqual(archive.testzip(), None)
+            self.assertNotIn("gigma-mcp/mcp.json", archive.namelist())
+            manifest = json.loads(archive.read("gigma-mcp/plugin.json"))
+            source = json.loads(source_manifest)
+            source["extensions"]["com.openai"]["apps"] = "./.app.json"
+            self.assertEqual(manifest, source)
+            self.assertEqual(json.loads(archive.read("gigma-mcp/.app.json")),
+                             {"apps": {"gigma": {"id": app_id, "required": True}}})
+            for name in set(default.namelist()) - {"gigma-mcp/plugin.json", "gigma-mcp/mcp.json"}:
+                self.assertEqual(archive.read(name), default.read(name))
+            self.assertEqual(set(archive.namelist()),
+                             (set(default.namelist()) - {"gigma-mcp/mcp.json"}) | {"gigma-mcp/.app.json"})
+        first = bound.read_bytes()
+        result = self.run_builder(output=False, app_id=app_id)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(bound.read_bytes(), first)
+        self.assertEqual(portable_path.read_bytes(), portable)
+        self.assertEqual((self.package / "plugin.json").read_bytes(), source_manifest)
+        self.assertEqual((self.package / "mcp.json").read_bytes(), source_mcp)
+        self.assertFalse((self.package / ".app.json").exists())
+
+    def test_app_id_prefixes_are_accepted(self):
+        for app_id in ("asdk_app_FAKE123", "connector_FAKE123", "templated_apps_FAKE123"):
+            with self.subTest(app_id=app_id):
+                result = self.run_builder(app_id=app_id)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                with zipfile.ZipFile(self.output) as archive:
+                    self.assertEqual(json.loads(archive.read("gigma-mcp/.app.json"))["apps"]["gigma"]["id"], app_id)
+
+    def test_invalid_app_ids_do_not_replace_existing_output(self):
+        original = self.build()
+        for app_id in ("", "asdk_app_", "connector_", "templated_apps_", "plugin_fake",
+                       "https://example.com", "asdk_app_-fake", "asdk_app__fake",
+                       "connector_-fake", "templated_apps__fake",
+                       "asdk_app_fake value", "asdk_app_fake/evil",
+                       "asdk_app_fake\n"):
+            with self.subTest(app_id=app_id):
+                result = self.run_builder(app_id=app_id)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("App ID", result.stdout)
+                self.assertEqual(self.output.read_bytes(), original)
 
     def test_rebuilding_after_source_time_and_mode_changes_is_identical(self):
         original = self.build()

@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parent
 PACKAGE = ROOT / "plugins" / "gigma-mcp"
 MCP_URL = "https://api.auth.gigma.ru/mcp/owner/"
 LIVE_CHECK = ROOT / "check_live_contract.py"
-VERSION = "0.3.2"
+VERSION = "0.3.3"
 MARKETPLACE_NAME = "gigma-mcp"
 MARKETPLACE_FILES = (
     ".agents/plugins/marketplace.json",

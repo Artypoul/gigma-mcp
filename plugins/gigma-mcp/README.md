@@ -6,6 +6,21 @@ Streamable HTTP server configuration and skills for the native callback flow
 and owner operations. Authentication and business logic remain on the Gigma
 server.
 
+## Команды из чата
+
+Выберите подключённый Gigma MCP через `@` и напишите **«Гигма, команды»**.
+Агент покажет меню без входа. С действующей сессией можно написать:
+
+- **Гигма, мой проект** → `erp_dialog_me`;
+- **Гигма, приложения** → `erp_list_applications`;
+- **Гигма, тарифы приложения …** → `erp_subscription_plans_list`;
+- **Гигма, все активные подписки** → `erp_workspace_subscriptions_list`;
+- **Гигма, платёжные инциденты приложения …** → `erp_payment_review_cases_list`.
+
+[Полный каталог команд](docs/chat-commands.md) содержит 77 имён, назначение
+и режим каждой операции. Это обычные фразы, а не специальные slash-команды.
+Выполнение возможно, когда инструменты действительно доступны в разговоре.
+
 ## Install from the marketplace
 
 - Repository: **https://github.com/Artypoul/gigma-mcp**
@@ -13,6 +28,14 @@ server.
 - Plugin selector: **`gigma-mcp@gigma-mcp`**
 
 ### ChatGPT
+
+For tools in ChatGPT web, use the
+[custom MCP connection route](docs/chatgpt-setup.md#команды-в-веб-чате-chatgpt)
+with transport authentication **No authentication**. Owner authentication
+continues through the native callback. A private App-bound package can attach
+these skills to a verified existing Gigma App; its `.app.json` references that
+connection rather than declaring a second server. Building that archive does
+not create or authenticate the connection.
 
 In a workspace with marketplace imports enabled, an admin uses **Admin →
 Plugins → Add → Import marketplace**, enters the repository URL and leaves
@@ -59,7 +82,7 @@ For the complete first-run procedure, read
 ### Check the connection
 
 Run `python check_live_contract.py` from this installed plugin directory,
-which includes `mcp.json` and the bundled [checker](check_live_contract.py).
+which includes the bundled [checker](check_live_contract.py).
 It checks endpoint discovery without sending a phone number or starting login.
 From a full repository checkout, also run:
 

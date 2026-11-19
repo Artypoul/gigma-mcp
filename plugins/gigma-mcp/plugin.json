@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "gigma-mcp",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Connect ChatGPT and compatible agents to the Gigma owner MCP through native callback onboarding.",
   "author": {
     "name": "Gigma",
