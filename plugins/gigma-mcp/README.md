@@ -19,6 +19,11 @@ duplicate registrations. A local Codex marketplace install does not register a
 connection in ChatGPT web. A successful upload is not proof that tools were
 discovered or that an owner session exists.
 
+The complete plugin declares `gigma` in `mcp.json`. A compatible client registers
+that connection with the skills when the plugin is installed and enabled;
+complete any connection steps presented by the host. You do not need to add
+the same MCP endpoint separately.
+
 ### Codex, Claude Code and Cursor
 
 Install from the public marketplace repository:
@@ -28,9 +33,11 @@ codex plugin marketplace add https://github.com/Artypoul/gigma-mcp.git
 codex plugin add gigma-mcp@gigma-mcp
 ```
 
-Keep exactly one `gigma` registration in the active client. Remove an old
-manual entry, close old Gigma chats, restart the client, and verify the live
-contract with `python check_live_contract.py` before starting a new chat.
+The plugin supplies the MCP configuration automatically.
+Keep exactly one `gigma` registration in the active client. If an old manual entry exists,
+remove it, close old Gigma chats and restart the client. Check that the plugin's
+MCP connection and `erp_dialog_*` tools are available. Verify the live server
+contract separately with `python check_live_contract.py`.
 Run that command from this installed plugin directory, which contains
 `README.md`, `mcp.json` and the bundled [checker](check_live_contract.py).
 The checker also runs from the root of a repository checkout.
@@ -48,6 +55,13 @@ use the package's `mcp.json` in Cursor MCP settings.
 For the complete first-run procedure, read
 [docs/mcp-client-setup.md](docs/mcp-client-setup.md).
 
+Version 0.3.1 fixes the 0.3.0 configuration that allowed skills to load while
+the [Codex portable parser](https://github.com/openai/codex/blob/b9559ff737000a4fcf7a0e12c3353cca1ea4d008/codex-rs/codex-mcp/src/agent_plugin_config.rs)
+rejected the MCP entry's unsupported `extensions` field. The portable server
+entry now contains only the transport type and URL. This parser fix does not
+by itself verify host provisioning or sign an owner in; the native callback
+flow is unchanged.
+
 ## Native owner connection
 
 An authenticated session can be reused when the discovered check schema supports
@@ -63,8 +77,11 @@ The agent shows only the callback number and safe project results. Opaque
 dialog and session capabilities remain in MCP tool state. They are never
 copied into chat, URLs, logs, files, or another service.
 
-Do not run `codex mcp login gigma` for this native flow. The Codex mapping uses
-`auth.type: none` for native dialog discovery. The package uses the slash
+Do not run `codex mcp login gigma` for this native flow. The server exposes
+native dialog discovery without credentials. Select transport authentication
+**None** if the host's connection flow asks for it; no credentials or per-server
+authentication extension are embedded in the portable MCP entry. The package
+uses the slash
 transport route `https://api.auth.gigma.ru/mcp/owner/` to avoid a POST
 redirect. The live server may advertise host-managed OAuth for other
 confidential transport clients. If the active host requires OAuth before

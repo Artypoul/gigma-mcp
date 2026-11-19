@@ -30,6 +30,14 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: Build portable ChatGPT package
         run: python build_chatgpt_package.py
+      - name: Install pinned Codex client
+        run: npm install --prefix "$RUNNER_TEMP/gigma-codex" --no-audit --no-fund @openai/codex@0.170.0
+      - name: Verify MCP registration with the real client
+        run: |
+          python check_client_registration.py \
+            --codex "$RUNNER_TEMP/gigma-codex/node_modules/.bin/codex" \
+            --archive dist/gigma-mcp-*-chatgpt.zip \
+            --regression-check
       - name: Upload installable package
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

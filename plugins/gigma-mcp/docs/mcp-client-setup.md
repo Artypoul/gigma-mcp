@@ -24,22 +24,24 @@ codex plugin marketplace add https://github.com/Artypoul/gigma-mcp.git
 codex plugin add gigma-mcp@gigma-mcp
 ```
 
+The plugin declares `gigma` in its root `mcp.json`. A compatible client registers
+that MCP connection when the plugin is installed and enabled, alongside its
+skills. Do not add a second server with `codex mcp add`.
+
 If a manually configured server named `gigma` exists, remove that entry first:
 
 ```text
 codex mcp remove gigma
 ```
 
-Verify that the plugin and server are present:
-
-```text
-codex mcp list
-```
-
 Keep one `gigma` registration only. Close old Gigma chats and restart the
-client after removing a manual entry or updating the plugin. Before connecting
-an owner, run the read-only live contract check from either the installed plugin
-directory (alongside its `README.md` and `mcp.json`) or the repository checkout root:
+client after removing a manual entry or updating the plugin. Inspect the plugin's
+MCP connection in the client and confirm that the new chat exposes
+`erp_dialog_check`, `erp_dialog_start`, `erp_dialog_status`, `erp_dialog_connect`
+and `erp_dialog_me`. Skills alone do not confirm server registration.
+Before connecting an owner, run the read-only live contract check from either
+the installed plugin directory (alongside its `README.md` and `mcp.json`) or the
+repository checkout root:
 
 ```text
 python check_live_contract.py
@@ -50,6 +52,14 @@ card, it is using stale or different metadata; do not answer the same choice in
 text, and start a fresh client chat after cleanup.
 
 Do not expect owner authentication at this point. Installation is not login.
+
+For an update from 0.3.0, install 0.3.1 of the existing plugin. Version 0.3.0
+placed an `extensions` field in the portable server entry; the inspected
+[Codex parser](https://github.com/openai/codex/blob/b9559ff737000a4fcf7a0e12c3353cca1ea4d008/codex-rs/codex-mcp/src/agent_plugin_config.rs)
+rejects that field and can omit the MCP server while loading the skills.
+Version 0.3.1 removes it, fixing this parser compatibility issue without changing
+the native callback flow. Confirm tool discovery in the installed client before
+starting owner login.
 
 ### Claude Code
 
@@ -117,10 +127,11 @@ the capability; it must report that a fresh check or bounded recovery is needed.
 ## Text callback flow and transport OAuth mode
 
 The package transport uses the slash route
-`https://api.auth.gigma.ru/mcp/owner/` to avoid a POST redirect. This
-package's Codex mapping uses `auth.type: none` so the native dialog tools can
-be discovered without a pasted token. Do not run `codex mcp login gigma` in the
-same attempt.
+`https://api.auth.gigma.ru/mcp/owner/` to avoid a POST redirect. The server permits
+native dialog discovery without credentials. The portable server entry declares
+only the transport type and URL. Select transport authentication **None** if the
+host's connection flow asks for it; do not embed credentials or per-server auth
+extensions in this config. Do not run `codex mcp login gigma` in the same attempt.
 
 All clients use the same text callback tools and textual consent step. This
 package expects a text-only backend contract and does not execute a UI choice.

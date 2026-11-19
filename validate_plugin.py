@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parent
 PACKAGE = ROOT / "plugins" / "gigma-mcp"
 MCP_URL = "https://api.auth.gigma.ru/mcp/owner/"
 LIVE_CHECK = ROOT / "check_live_contract.py"
-VERSION = "0.3.0"
+VERSION = "0.3.1"
 
 REQUIRED_DOCS = (
     ROOT / "docs/chatgpt-setup.md",
@@ -54,6 +54,35 @@ def load(path: Path) -> dict[str, object]:
 
 def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
+
+
+def validate_portable_mcp(mcp: dict[str, object]) -> None:
+    """Keep the declaration compatible with the client's strict MCP parser.
+
+    Codex rejects unsupported server fields individually and can still expose
+    the plugin's skills. In particular, putting OpenAI authentication metadata
+    in this portable server used to silently remove Gigma from the MCP list.
+    Client registration is also checked with the real Codex loader in CI.
+    """
+    if mcp.get("$schema") != "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json":
+        raise ValueError("portable MCP schema is missing or unsupported")
+    if set(mcp) != {"$schema", "mcpServers"}:
+        raise ValueError("portable MCP file contains unsupported fields")
+    servers = mcp.get("mcpServers")
+    if not isinstance(servers, dict) or set(servers) != {"gigma"}:
+        raise ValueError("package must declare exactly one gigma MCP server")
+    server = servers["gigma"]
+    if not isinstance(server, dict):
+        raise ValueError("gigma MCP server must be an object")
+    if set(server) != {"type", "url"}:
+        raise ValueError(
+            "gigma MCP declaration must contain only type and url; "
+            "unsupported fields such as extensions can hide the server in Codex"
+        )
+    if server["url"] != MCP_URL:
+        raise ValueError("MCP URL mismatch")
+    if server["type"] != "streamable-http":
+        raise ValueError("MCP transport mismatch")
 
 
 def validate_portable_metadata(
@@ -162,20 +191,7 @@ def main() -> int:
         )
     validate_packaged_links(PACKAGE)
 
-    mcp = load(PACKAGE / "mcp.json")
-    if mcp.get("$schema") != "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json":
-        raise ValueError("portable MCP schema is missing or unsupported")
-    if not isinstance(mcp.get("mcpServers"), dict) or set(mcp["mcpServers"]) != {"gigma"}:
-        raise ValueError("package must declare exactly one gigma MCP server")
-    server = mcp["mcpServers"].get("gigma")
-    if not isinstance(server, dict) or server["url"] != MCP_URL:
-        raise ValueError("MCP URL mismatch")
-    if server["type"] != "streamable-http":
-        raise ValueError("MCP transport mismatch")
-    if server["extensions"]["com.openai"]["auth"]["type"] != "none":
-        raise ValueError("Native callback package must use auth.type none")
-    if {"auth", "server_url", "headers", "command", "env"} & server.keys():
-        raise ValueError("portable remote server contains unsupported connection fields")
+    validate_portable_mcp(load(PACKAGE / "mcp.json"))
 
     portable = load(PACKAGE / "plugin.json")
     codex = load(PACKAGE / ".codex-plugin/plugin.json")
